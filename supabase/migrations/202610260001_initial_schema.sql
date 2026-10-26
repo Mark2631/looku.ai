@@ -243,3 +243,22 @@ grant select on public.products to anon, authenticated;
 grant select, insert on public.merchant_applications to authenticated;
 grant select on public.profiles to authenticated;
 grant update (full_name, style_preferences, onboarding_completed, updated_at) on public.profiles to authenticated;
+
+
+-- OAuth tokens are never exposed through the client Data API. The server stores them encrypted.
+create table if not exists public.calendar_connections (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  provider text not null default 'google' check (provider = 'google'),
+  account_email text,
+  access_token_encrypted text not null,
+  refresh_token_encrypted text not null,
+  expires_at timestamptz,
+  scopes text[] not null default '{}'::text[],
+  connected_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.calendar_connections enable row level security;
+revoke all on table public.calendar_connections from public, anon, authenticated;
+grant all on table public.calendar_connections to service_role;
+create trigger calendar_connections_set_updated_at before update on public.calendar_connections
+for each row execute procedure public.set_updated_at();
