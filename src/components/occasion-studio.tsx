@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, CalendarDays, CheckCircle2, CircleAlert, ExternalLink, Heart, Shirt, ShoppingBag, Sparkles, Wallet } from "lucide-react";
 
 type WardrobePiece = {
@@ -41,7 +41,7 @@ export function OccasionStudio({
   items: WardrobePiece[]; products: StoreProduct[]; generated: OutfitIdea[]; styling: boolean;
   onGenerate: (prompt: string, occasion: string) => void;
   onPlan: (date: string, title: string, occasion: string) => void;
-  onRenderLook: (idea: OutfitIdea, index: number) => React.ReactNode;
+  onRenderLook: (idea: OutfitIdea, index: number) => ReactNode;
 }) {
   const [eventName, setEventName] = useState("Birthday");
   const [eventDate, setEventDate] = useState("");
