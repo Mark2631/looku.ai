@@ -961,6 +961,21 @@ export function LookuApp() {
     />;
   }
 
+  async function saveOccasionWishlist(title: string, url: string, note: string) {
+    if (!user) { showToast("Sign in to save a private wishlist."); return; }
+    const safeUrl = safeExternalUrl(url);
+    if (!safeUrl) { showToast("Use a valid HTTPS product URL."); return; }
+    const { error } = await createClient().from("wishlist_items").insert({
+      user_id: user.id,
+      title: title.slice(0, 160),
+      product_url: safeUrl,
+      note: note.slice(0, 500) || null,
+    });
+    if (error) { showToast("Couldn't save that product link. Please try again."); return; }
+    await loadData(user.id);
+    showToast("Product link saved to your private wishlist.");
+  }
+
   function renderOccasionStudio() {
     return <OccasionStudio
       items={items}
@@ -970,6 +985,7 @@ export function LookuApp() {
       onGenerate={(prompt, selectedOccasion) => { setOccasion(selectedOccasion); void generateLooks(prompt, selectedOccasion); }}
       onPlan={(date, title, selectedOccasion) => { setOccasion(selectedOccasion); openModal("plan", null, date); setModalPlanTitle(title); setModalPlanOccasion(selectedOccasion); }}
       onRenderLook={(idea, index) => renderOutfitIdea(idea, index)}
+      onSaveWishlist={saveOccasionWishlist}
     />;
   }
 
