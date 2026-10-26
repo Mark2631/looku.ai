@@ -29,23 +29,54 @@ export async function POST(request: NextRequest) {
     if (itemsError) return NextResponse.json({ error: "Couldn't read your wardrobe. Please try again." }, { status: 500 });
     if (!items || items.length < 2) return NextResponse.json({ error: "Add at least two available wardrobe items before generating an outfit." }, { status: 422 });
 
+    const [profileResult, feedbackResult, wornResult] = await Promise.all([
+      supabase.from("profiles").select("style_preferences").eq("id", user.id).maybeSingle(),
+      supabase.from("outfit_feedback").select("reaction,reasons,note,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(25),
+      supabase.from("outfits").select("id,title,occasion,worn_at").eq("user_id", user.id).eq("status", "worn").not("worn_at", "is", null).order("worn_at", { ascending: false }).limit(10),
+    ]);
+    const wornOutfitIds = (wornResult.data || []).map(o => o.id);
+    const wornLinks = wornOutfitIds.length
+      ? await supabase.from("outfit_items").select("outfit_id,wardrobe_item_id").eq("user_id", user.id).in("outfit_id", wornOutfitIds)
+      : { data: [] as { outfit_id: string; wardrobe_item_id: string }[] };
+    const recentlyWornItemIds = Array.from(new Set((wornLinks.data || []).map(link => link.wardrobe_item_id)));
+    const recentlyWornItems = recentlyWornItemIds.map(id => items.find(item => item.id === id)).filter(Boolean).map(item => ({ id: item!.id, name: item!.name, category: item!.category }));
+    const preferences = profileResult.data?.style_preferences || {};
+    const feedback = (feedbackResult.data || []).map(entry => ({ reaction: entry.reaction, reasons: entry.reasons, note: entry.note })).slice(0, 20);
+
     const prompt = [
       "You are LOOKU, a careful personal stylist. Build outfits ONLY from the wardrobe items supplied below.",
       "Do not invent item IDs, brands, garments, body measurements, weather or event information. Every outfit must use at least two different supplied item IDs and at most six.",
-      "Use category logic (a top with a bottom, or a dress with suitable shoes), color balance, pattern balance, occasion formality, season suitability, comfort and the user's request. Avoid claiming physical fit or fabric properties not present in the attributes.",
+      "A complete outfit must include a top and a bottom, or a dress with appropriate shoes. If the user owns available shoes, include footwear when practical. Never repeat a garment ID within one outfit.",
+      "Use category logic, color balance, pattern balance, occasion formality, season suitability, comfort and the user request. Respect explicit accessibility, modesty, fit, climate and personal constraints. Avoid claiming physical fit or fabric properties not present in the attributes.",
+      "Respect the user's saved preferences and recent feedback. Prefer variety over repeating pieces worn in the last few recorded looks, unless the user explicitly asks to reuse them. Feedback represents personal preference, not a universal fashion rule.",
       "Return exactly the requested number where possible, otherwise return fewer strong options. Avoid near-duplicate alternatives. Keep reasons specific and plain-language.",
-      "Return valid JSON only: {\"outfits\":[{\"title\":\"...\",\"style\":\"...\",\"reason\":\"...\",\"itemIds\":[\"uuid\",\"uuid\"],\"confidenceNote\":\"...\"}]}.",
+      "Return valid JSON only: {\"outfits\":[{\"title\":\"...\",\"style\":\"...\",\"reason\":\"...\",\"itemIds\":[\"uuid\",\"uuid\"],\"confidenceNote\":\"...\"}]}",
       "Requested occasion: " + body.data.occasion,
       "User instruction: " + body.data.prompt,
+      "Saved personal style profile: " + JSON.stringify(preferences),
+      "Recent user feedback (newest first): " + JSON.stringify(feedback),
+      "Items used in recently worn looks, avoid repeating unless requested: " + JSON.stringify(recentlyWornItems),
       "Requested options: " + body.data.count,
-      "User wardrobe (the IDs below are the only allowed item references): " + JSON.stringify(items)
+      "User wardrobe (IDs are the only allowed item references): " + JSON.stringify(items)
     ].join("\n\n");
     const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-2.5-flash", prompt, temperature: 0.35, maxOutputTokens: 1500 });
     const parsed = resultSchema.safeParse(parseJson(result.text));
     if (!parsed.success) return NextResponse.json({ error: "The stylist returned a result we couldn't validate. Try a more specific occasion." }, { status: 502 });
     const validIds = new Set(items.map(item => item.id));
-    const outfits = parsed.data.outfits.map(outfit => ({ ...outfit, itemIds: Array.from(new Set(outfit.itemIds)).filter(id => validIds.has(id)) })).filter(outfit => outfit.itemIds.length >= 2);
-    if (!outfits.length) return NextResponse.json({ error: "No valid combination was found from the clothes currently available. Try adding more categories." }, { status: 422 });
+    const categoriesById = new Map(items.map(item => [item.id, item.category]));
+    const availableShoesExist = items.some(item => item.category === "Shoes");
+    const outfits = parsed.data.outfits.map(outfit => ({ ...outfit, itemIds: Array.from(new Set(outfit.itemIds)).filter(id => validIds.has(id)) }))
+      .filter(outfit => {
+        if (outfit.itemIds.length < 2) return false;
+        const outfitCategories = outfit.itemIds.map(id => categoriesById.get(id));
+        const hasDress = outfitCategories.includes("Dresses");
+        const hasTop = outfitCategories.includes("Tops");
+        const hasBottom = outfitCategories.includes("Bottoms");
+        const hasShoes = outfitCategories.includes("Shoes");
+        const hasCompleteCore = hasDress || (hasTop && hasBottom);
+        return hasCompleteCore && (!availableShoesExist || hasShoes);
+      });
+    if (!outfits.length) return NextResponse.json({ error: "I couldn't form a complete outfit with the clothes marked available. Add a top and bottom, or a dress and suitable shoes, and try again." }, { status: 422 });
     return NextResponse.json({ outfits }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("LOOKU stylist error", error instanceof Error ? error.message : "Unknown error");
