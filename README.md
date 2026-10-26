@@ -18,7 +18,7 @@ LOOKU is a mobile-first personal fashion platform: a private digital wardrobe, a
 
 1. Install Node.js 20.9+ (Node 24 is recommended) and npm.
 2. Copy .env.example to .env.local.
-3. Create a dedicated Supabase project for LOOKU. Do not reuse CampusTrader or Galaxy Cakes production data.
+3. Connect the intended LOOKU Supabase project. Confirm it is not a shared project containing another app's data before applying schema migrations. Do not use CampusTrader or Galaxy Cakes projects.
 4. Apply supabase/migrations/202610260001_initial_schema.sql in the Supabase SQL editor or using the Supabase CLI.
 5. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local. Set SUPABASE_SERVICE_ROLE_KEY only on the server for secure admin catalog management and account deletion.
 6. Connect an AI Gateway account/key. Set AI_GATEWAY_API_KEY and optionally change LOOKU_AI_MODEL. Model API calls have provider costs; the API enforces an initial limit of 20 AI operations per user per UTC day.
