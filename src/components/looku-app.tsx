@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { StyleInsights } from "@/components/style-insights";
 
-type Screen = "Today" | "Closet" | "Stylist" | "Plan" | "Looks" | "Shop" | "Settings";
+type Screen = "Today" | "Closet" | "Stylist" | "Plan" | "Looks" | "Shop" | "Insights" | "Settings";
 type WardrobeItem = {
   id: string; user_id: string; name: string; brand: string | null; category: string; colors: string[]; pattern: string | null;
   formality: number; seasons: string[]; style_tags: string[]; image_path: string | null; image_url?: string | null;
@@ -35,6 +35,7 @@ type ChatMessage = { role: "user" | "assistant"; text: string };
 type CalendarEvent = { id: string; title: string; description: string; location: string; start: string; end: string; url: string | null };
 type CalendarPayload = { configured: boolean; connected: boolean; accountEmail?: string | null; events: CalendarEvent[]; message?: string; error?: string };
 type WeatherPayload = { location: { name: string; region: string; country: string }; current: { tempC: number; feelsLikeC: number; condition: string; icon: string; humidity: number; windKph: number; precipitationMm: number; updatedAt: string } };
+type IntegrationHealth = { backendConfigured?: boolean; aiGatewayKeyConfigured?: boolean; adminCatalogConfigured?: boolean; calendarConfigured?: boolean; weatherConfigured?: boolean; tryOnConfigured?: boolean };
 
 const navItems: { id: Screen; label: string; icon: typeof House; group?: string }[] = [
   { id: "Today", label: "Today", icon: House, group: "YOUR SPACE" },
@@ -43,6 +44,7 @@ const navItems: { id: Screen; label: string; icon: typeof House; group?: string 
   { id: "Plan", label: "Outfit planner", icon: CalendarDays },
   { id: "Looks", label: "My lookbook", icon: ImagePlus },
   { id: "Shop", label: "Curated shop", icon: ShoppingBag, group: "DISCOVER" },
+  { id: "Insights", label: "Style intelligence", icon: CircleHelp, group: "DISCOVER" },
   { id: "Settings", label: "Preferences", icon: Settings, group: "ACCOUNT" },
 ];
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Outerwear", "Dresses", "Accessories", "Activewear", "Sleepwear", "Bags", "Other"];
@@ -117,6 +119,7 @@ export function LookuApp() {
   const [admin, setAdmin] = useState(false);
   const [adminProducts, setAdminProducts] = useState<Product[]>([]);
   const [adminError, setAdminError] = useState("");
+  const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth | null>(null);
   const [calendarStatus, setCalendarStatus] = useState<CalendarPayload>({ configured: false, connected: false, events: [] });
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
@@ -180,6 +183,10 @@ export function LookuApp() {
   }, [showToast]);
 
   useEffect(() => {
+    fetch("/api/health", { cache: "no-store" }).then(response => response.json()).then(data => setIntegrationHealth(data as IntegrationHealth)).catch(() => setIntegrationHealth(null));
+  }, []);
+
+  useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     if (!configured) { setReady(true); return; }
     let live = true;
@@ -240,7 +247,8 @@ export function LookuApp() {
   }, [configured, user?.id, screen]);
 
   useEffect(() => {
-    if (!configured || !user || !weatherCity || screen !== "Today") { setWeather(null); setWeatherMessage(""); return; }
+    if (!configured || !user || !weatherCity) { setWeather(null); setWeatherMessage(""); return; }
+    if (screen !== "Today") return;
     let active = true;
     fetch("/api/weather?city=" + encodeURIComponent(weatherCity), { cache: "no-store" }).then(async response => {
       const data = await response.json();
