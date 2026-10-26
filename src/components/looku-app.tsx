@@ -106,6 +106,10 @@ export function LookuApp() {
   const [modalError, setModalError] = useState("");
   const [modalOutfitId, setModalOutfitId] = useState<string | null>(null);
   const [modalDate, setModalDate] = useState(todayIso());
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [modalPlanTitle, setModalPlanTitle] = useState("Outfit plan");
+  const [modalPlanOccasion, setModalPlanOccasion] = useState("Everyday");
+  const [modalPlanNotes, setModalPlanNotes] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [admin, setAdmin] = useState(false);
@@ -463,10 +467,14 @@ export function LookuApp() {
     const note = String(form.get("notes") || "").trim();
     const outfitId = String(form.get("outfit_id") || "") || null;
     if (!planDate || !eventTitle) { setModalError("Choose a date and name the plan."); setModalBusy(false); return; }
-    const { data, error } = await createClient().from("outfit_plans").insert({ user_id: user.id, plan_date: planDate, event_title: eventTitle, occasion: planOccasion, notes: note || null, outfit_id: outfitId }).select("*").single();
+    const values = { plan_date: planDate, event_title: eventTitle.slice(0,140), occasion: planOccasion, notes: note || null, outfit_id: outfitId };
+    const query = editingPlanId
+      ? createClient().from("outfit_plans").update(values).eq("id", editingPlanId).eq("user_id", user.id).select("*").single()
+      : createClient().from("outfit_plans").insert({ user_id: user.id, ...values }).select("*").single();
+    const { data, error } = await query;
     if (error || !data) { setModalError(error?.message || "Couldn't save this plan."); setModalBusy(false); return; }
     if (outfitId) await createClient().from("outfits").update({ status: "planned" }).eq("id", outfitId).eq("user_id", user.id);
-    await loadData(user.id); setModal(null); setModalBusy(false); showToast("Added to your outfit planner.");
+    await loadData(user.id); setModal(null); setModalBusy(false); showToast(editingPlanId ? "Outfit plan updated." : "Added to your outfit planner.");
   }
 
   async function submitLook(e: FormEvent<HTMLFormElement>) {
@@ -598,7 +606,12 @@ export function LookuApp() {
     await generateLooks(text, occasion, true);
   }
 
-  function openModal(next: Modal, outfitId: string | null = null, planDate = todayIso()) { setModalError(""); setModalOutfitId(outfitId); setModalDate(planDate); setModal(next); }
+  function openModal(next: Modal, outfitId: string | null = null, planDate = todayIso(), plan?: OutfitPlan) {
+    setModalError(""); setModalOutfitId(plan?.outfit_id || outfitId); setModalDate(planDate);
+    setEditingPlanId(plan?.id || null); setModalPlanTitle(plan?.event_title || "Outfit plan");
+    setModalPlanOccasion(plan?.occasion || occasion); setModalPlanNotes(plan?.notes || "");
+    setModal(next);
+  }
   function outfitItems(outfit: Outfit | OutfitIdea) {
     const ids = "item_ids" in outfit ? outfit.item_ids : outfit.itemIds;
     return ids.map(id => items.find(item => item.id === id)).filter((item): item is WardrobeItem => Boolean(item));
@@ -661,10 +674,10 @@ export function LookuApp() {
       title = "Plan an outfit";
       content = <form onSubmit={submitPlan}>
         <label className="field">Date<input className="input" name="date" type="date" required defaultValue={modalDate}/></label>
-        <label className="field">Event name<input className="input" name="title" required maxLength={140} defaultValue="Outfit plan" placeholder="Client meeting, dinner, travel…"/></label>
-        <label className="field">Occasion<select className="input" name="occasion" defaultValue={occasion}>{occasions.map(o=><option key={o}>{o}</option>)}</select></label>
+        <label className="field">Event name<input className="input" name="title" required maxLength={140} defaultValue={modalPlanTitle} placeholder="Client meeting, dinner, travel…"/></label>
+        <label className="field">Occasion<select className="input" name="occasion" defaultValue={modalPlanOccasion}>{occasions.map(o=><option key={o}>{o}</option>)}</select></label>
         <label className="field">Attach a saved look (optional)<select className="input" name="outfit_id" defaultValue={modalOutfitId || ""}><option value="">Choose later</option>{savedLooks.map(o=><option key={o.id} value={o.id}>{o.title} · {o.occasion}</option>)}</select></label>
-        <label className="field">Notes (optional)<textarea className="input textarea" name="notes" maxLength={1200} placeholder="Dress code, comfort needs, details to remember…"/></label>
+        <label className="field">Notes (optional)<textarea className="input textarea" name="notes" defaultValue={modalPlanNotes} maxLength={1200} placeholder="Dress code, comfort needs, details to remember…"/></label>
         {modalError && <ErrorNotice>{modalError}</ErrorNotice>}
         <div className="modal-actions"><button type="button" className="button" onClick={close}>Cancel</button><button className="button primary" disabled={modalBusy}>{modalBusy?"Saving…":"Save plan"}</button></div>
       </form>;
@@ -825,7 +838,7 @@ export function LookuApp() {
         {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
       </div><p className="tiny muted" style={{ margin:"15px 0 0" }}>Choose a date to create a plan. The date is set in the form so you can add an event name, occasion and saved outfit.</p></section>
       <section className="section"><div className="section-head"><div><span className="eyebrow">UP NEXT</span><h2 className="section-title">Your upcoming plans</h2></div></div>
-        {plans.filter(p=>p.plan_date>=todayIso()).length ? <div className="stack">{plans.filter(p=>p.plan_date>=todayIso()).sort((a,b)=>a.plan_date.localeCompare(b.plan_date)).map(plan=><div className="surface row" key={plan.id}><div style={{ display:"flex",gap:13,alignItems:"center",minWidth:0 }}><div className="avatar"><CalendarDays size={16}/></div><div style={{ minWidth:0 }}><strong style={{fontSize:13}}>{plan.event_title}</strong><p className="tiny muted" style={{margin:"5px 0 0"}}>{formatDate(plan.plan_date)} · {plan.occasion}{plan.notes?" · "+plan.notes:""}</p></div></div><button className="icon-button" onClick={async()=>{if(!user||!confirm("Delete this plan?"))return;const {error}=await createClient().from("outfit_plans").delete().eq("id",plan.id).eq("user_id",user.id);if(error)showToast("Couldn't remove plan.");else{setPlans(p=>p.filter(x=>x.id!==plan.id));showToast("Plan removed.");}}} aria-label="Delete plan"><Trash2 size={15}/></button></div>)}</div> : <EmptyState icon={CalendarDays} title="Your calendar has room." body="Add an event and attach a saved look, or create the plan now and choose an outfit later." action="Add your first plan" onAction={()=>openModal("plan")}/>}
+        {plans.filter(p=>p.plan_date>=todayIso()).length ? <div className="stack">{plans.filter(p=>p.plan_date>=todayIso()).sort((a,b)=>a.plan_date.localeCompare(b.plan_date)).map(plan=><div className="surface row" key={plan.id}><div style={{ display:"flex",gap:13,alignItems:"center",minWidth:0 }}><div className="avatar"><CalendarDays size={16}/></div><div style={{ minWidth:0 }}><strong style={{fontSize:13}}>{plan.event_title}</strong><p className="tiny muted" style={{margin:"5px 0 0"}}>{formatDate(plan.plan_date)} · {plan.occasion}{plan.notes?" · "+plan.notes:""}</p></div></div><div className="tool-row"><button className="button compact" onClick={()=>openModal("plan",plan.outfit_id,plan.plan_date,plan)}><Pencil size={12}/>Edit</button><button className="icon-button" onClick={async()=>{if(!user||!confirm("Delete this plan?"))return;const {error}=await createClient().from("outfit_plans").delete().eq("id",plan.id).eq("user_id",user.id);if(error)showToast("Couldn't remove plan.");else{setPlans(p=>p.filter(x=>x.id!==plan.id));showToast("Plan removed.");}}} aria-label="Delete plan"><Trash2 size={15}/></button></div></div>)}</div> : <EmptyState icon={CalendarDays} title="Your calendar has room." body="Add an event and attach a saved look, or create the plan now and choose an outfit later." action="Add your first plan" onAction={()=>openModal("plan")}/>}
       </section>
     </>;
   }
