@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const prompt = [
       "You are LOOKU, a careful personal stylist. Build outfits ONLY from the wardrobe items supplied below.",
       "Do not invent item IDs, brands, garments, body measurements, weather or event information. Every outfit must use at least two different supplied item IDs and at most six.",
-      "A complete outfit must include a top and a bottom, or a dress with appropriate shoes. If the user owns available shoes, include footwear when practical. Never repeat a garment ID within one outfit.",
+      "A complete outfit must include a top and a bottom, or a dress with appropriate shoes. For beach/pool contexts, swimwear may be the core garment with available shoes, cover-ups or accessories as practical. If the user owns available shoes, include footwear when practical. Never repeat a garment ID within one outfit.",
       "Use category logic, color balance, pattern balance, occasion formality, season suitability, comfort and the user request. Respect explicit accessibility, modesty, fit, climate and personal constraints. Avoid claiming physical fit or fabric properties not present in the attributes.",
       getResearchPrompt(),
       "Use a supplied weather context only as a current-condition signal. Never infer a forecast from current conditions. If no weather is supplied, do not mention exact temperature or precipitation.",
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
     const validIds = new Set(items.map(item => item.id));
     const categoriesById = new Map(items.map(item => [item.id, item.category]));
     const availableShoesExist = items.some(item => item.category === "Shoes");
+    const isSwimOccasion = /\b(beach|pool|swim|swimming)\b/i.test(body.data.occasion + " " + body.data.prompt);
     const outfits = parsed.data.outfits.map(outfit => ({ ...outfit, itemIds: Array.from(new Set(outfit.itemIds)).filter(id => validIds.has(id)) }))
       .filter(outfit => {
         if (outfit.itemIds.length < 2) return false;
@@ -92,11 +93,12 @@ export async function POST(request: NextRequest) {
         const hasDress = outfitCategories.includes("Dresses");
         const hasTop = outfitCategories.includes("Tops");
         const hasBottom = outfitCategories.includes("Bottoms");
+        const hasSwimwear = outfitCategories.includes("Swimwear");
         const hasShoes = outfitCategories.includes("Shoes");
-        const hasCompleteCore = hasDress || (hasTop && hasBottom);
+        const hasCompleteCore = hasDress || (hasTop && hasBottom) || (isSwimOccasion && hasSwimwear);
         return hasCompleteCore && (!availableShoesExist || hasShoes);
       });
-    if (!outfits.length) return NextResponse.json({ error: "I couldn't form a complete outfit with the clothes marked available. Add a top and bottom, or a dress and suitable shoes, and try again." }, { status: 422 });
+    if (!outfits.length) return NextResponse.json({ error: "I couldn't form a complete outfit with the clothes marked available. Add a top and bottom, a dress, or swimwear for a beach/pool occasion, plus suitable available footwear where needed." }, { status: 422 });
     return NextResponse.json({ outfits }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("LOOKU stylist error", error instanceof Error ? error.message : "Unknown error");
