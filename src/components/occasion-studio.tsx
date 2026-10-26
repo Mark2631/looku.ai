@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from "react";
 import { ArrowRight, CalendarDays, CheckCircle2, CircleAlert, ExternalLink, Heart, Shirt, ShoppingBag, Sparkles, Wallet } from "lucide-react";
+import { filterProductsForGaps, getPotentialShoppingGaps } from "@/lib/wardrobe-rules";
 
 type WardrobePiece = {
   id: string; name: string; category: string; colors: string[]; status: "available" | "laundry" | "retired";
@@ -99,35 +100,8 @@ export function OccasionStudio({
   const eventGapGuides = gapGuides.filter(guide => guide.occasion.toLowerCase() === eventName.toLowerCase());
   const readyItems = items.filter(item => item.is_owned && item.status === "available");
   const ownedCategories = useMemo(() => new Set(readyItems.map(item => item.category)), [readyItems]);
-  const eventNeeds = CATEGORY_NEEDS[eventName] || CATEGORY_NEEDS.Birthday;
-  const hasDress = ownedCategories.has("Dresses");
-  const hasTop = ownedCategories.has("Tops");
-  const hasBottom = ownedCategories.has("Bottoms");
-  const coreCovered = hasDress || (hasTop && hasBottom);
-  const missingCategories = useMemo(() => {
-    const gaps: string[] = [];
-    if (!coreCovered) {
-      if (!hasTop && !hasBottom && !hasDress) gaps.push("Dresses", "Tops", "Bottoms");
-      else if (hasTop && !hasBottom) gaps.push("Bottoms", "Dresses");
-      else if (hasBottom && !hasTop) gaps.push("Tops", "Dresses");
-      else if (!hasDress && (!hasTop || !hasBottom)) gaps.push(!hasTop ? "Tops" : "Bottoms");
-    }
-    if (eventNeeds.includes("Shoes") && !ownedCategories.has("Shoes")) gaps.push("Shoes");
-    if (["Travel day", "Outdoor event"].includes(eventName) && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
-    if (eventName === "Gym or active" && !ownedCategories.has("Activewear")) gaps.push("Activewear");
-    return Array.from(new Set(gaps));
-  }, [coreCovered, hasTop, hasBottom, hasDress, eventNeeds, eventName, ownedCategories]);
-  const budgetIsSet = budget.trim() !== "" && Number.isFinite(Number(budget));
-  const budgetNumber = budgetIsSet ? Number(budget) : null;
-  const withinBudget = (product: StoreProduct) => !budgetIsSet || (product.price !== null && budgetNumber !== null && product.price <= budgetNumber);
-  const matchingProducts = products
-    .filter(product => product.currency === "KES" && withinBudget(product))
-    .filter(product => {
-      const category = product.category.toLowerCase();
-      return missingCategories.some(need => category.includes(need.toLowerCase()) || need.toLowerCase().includes(category));
-    })
-    .slice(0, 8);
-  const shoppingOptions = matchingProducts;
+  const missingCategories = getPotentialShoppingGaps(ownedCategories, eventName);
+  const shoppingOptions = filterProductsForGaps(products, missingCategories, budget);
 
   async function saveExternalProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
