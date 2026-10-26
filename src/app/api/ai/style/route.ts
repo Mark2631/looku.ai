@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the LOOKU database migration before using the stylist." }, { status: 503 });
-    if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit of 10 operations. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
+    if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit of 20 operations. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
 
     const { data: items, error: itemsError } = await supabase.from("wardrobe_items").select("id,name,brand,category,colors,pattern,formality,seasons,style_tags,status,attributes").eq("user_id", user.id).eq("is_owned", true).eq("status", "available").limit(120);
     if (itemsError) return NextResponse.json({ error: "Couldn't read your wardrobe. Please try again." }, { status: 500 });
