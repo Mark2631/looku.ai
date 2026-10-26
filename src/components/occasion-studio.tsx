@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from "react";
 import { ArrowRight, CalendarDays, CheckCircle2, CircleAlert, ExternalLink, Heart, Shirt, ShoppingBag, Sparkles, Wallet } from "lucide-react";
 
 type WardrobePiece = {
@@ -102,7 +102,7 @@ export function OccasionStudio({
     .slice(0, 8);
   const shoppingOptions = matchingProducts.length ? matchingProducts : productFallback;
 
-  async function saveExternalProduct(event: React.FormEvent<HTMLFormElement>) {
+  async function saveExternalProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!externalProductTitle.trim() || !externalProductUrl.trim()) return;
     let url: URL;
