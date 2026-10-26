@@ -169,7 +169,7 @@ begin
   values (v_user_id, (timezone('utc', now()))::date, 1)
   on conflict (user_id, usage_date)
   do update set call_count = public.ai_usage_daily.call_count + 1
-  where public.ai_usage_daily.call_count < 20
+  where public.ai_usage_daily.call_count < 10
   returning call_count into v_count;
   return v_count is not null;
 end;
