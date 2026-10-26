@@ -67,6 +67,7 @@ export function OccasionStudio({
   const [externalProductUrl, setExternalProductUrl] = useState("");
   const [externalProductNote, setExternalProductNote] = useState("");
   const [savingWishlist, setSavingWishlist] = useState(false);
+  const [savingCatalogProductId, setSavingCatalogProductId] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
     Promise.all([
@@ -91,6 +92,41 @@ export function OccasionStudio({
     () => filterBudgetSafeProducts(products, missingCategories, budget, 8),
     [products, missingCategories, budget],
   );
+
+  const relevantMerchantSources = useMemo(() => {
+    if (!missingCategories.length) return merchantSources;
+    return merchantSources.filter(source => {
+      const tags = source.categories.join(" ").toLowerCase();
+      return missingCategories.some(need => {
+        const category = need.toLowerCase();
+        if (["tops", "bottoms", "dresses", "outerwear"].includes(category)) {
+          return /clothing|apparel|womenswear|fashion|local-design|locally-designed/.test(tags);
+        }
+        if (category === "shoes") return /shoe|footwear/.test(tags);
+        if (category === "accessories" || category === "bags") return /accessor|bag/.test(tags);
+        if (category === "swimwear") return /swimwear|clothing|apparel|fashion/.test(tags);
+        if (category === "activewear") return /activewear|sportswear|clothing/.test(tags);
+        return /fashion|clothing/.test(tags);
+      });
+    });
+  }, [merchantSources, missingCategories]);
+
+  async function saveCatalogProduct(product: StoreProduct) {
+    try {
+      const url = new URL(product.product_url);
+      if (url.protocol !== "https:") throw new Error("Invalid retailer URL");
+      setSavingCatalogProductId(product.id);
+      const priceNote = product.price === null
+        ? "Price not listed."
+        : "Listed price: " + product.currency + " " + Number(product.price).toLocaleString() + "; confirm at checkout.";
+      const note = ["Consider for " + eventName + ".", priceNote, "Budget cap: KES " + (budget || "not set") + ". Verify current price, size and stock at the retailer."].join(" ");
+      await onSaveWishlist(product.title, url.toString(), note);
+    } catch {
+      // The product is still visible at the retailer; never save an unsafe URL.
+    } finally {
+      setSavingCatalogProductId(null);
+    }
+  }
 
   async function saveExternalProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
