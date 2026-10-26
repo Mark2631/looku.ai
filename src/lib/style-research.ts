@@ -72,6 +72,56 @@ export const STYLE_RESEARCH_SOURCES: ResearchSource[] = [
     application: "The marketplace should complement a user's wardrobe, not push endless purchasing. Product suggestions must be optional, transparent and linked to a verified merchant.",
     limitation: "LOOKU must not claim that an affiliate suggestion is sustainable merely because it matches a wardrobe gap; product-specific evidence is required.",
   },
+  {
+    id: "fashion-compatibility-explanations",
+    title: "Deciphering Compatibility Relationships with Textual Descriptions via Extraction and Explanation",
+    publisher: "AAAI Conference on Artificial Intelligence",
+    year: "2024",
+    url: "https://doi.org/10.1609/aaai.v38i8.28764",
+    takeaway: "This paper introduces the Pair Fashion Explanation dataset and a two-stage method for generating descriptions of why fashion items complement one another.",
+    application: "LOOKU should name observable reasons such as category balance and recorded color coordination rather than relying on vague claims like 'perfectly stylish'.",
+    limitation: "A published benchmark does not validate a user's fit, taste, cultural requirements or event details. Explanations must remain grounded in known garment attributes.",
+  },
+  {
+    id: "personalized-coordination-preferences",
+    title: "Personalized Fashion Outfit Generation with User Coordination Preference Learning",
+    publisher: "Information Processing & Management",
+    year: "2023",
+    url: "https://doi.org/10.1016/j.ipm.2023.103434",
+    takeaway: "The study models user preferences for category combinations alongside item compatibility when generating personalized outfits.",
+    application: "LOOKU should separate general outfit plausibility from personal taste: saved preferences, likes, dislikes, swaps and wear feedback can affect the ordering of workable looks.",
+    limitation: "The reported results use research datasets and may not transfer directly to a wardrobe-first app or Kenyan users. User control and varied alternatives remain necessary.",
+  },
+  {
+    id: "multimodal-outfit-recommendation",
+    title: "A Comparative Study of Outfit Recommendation Methods with a Focus on Attention-based Fusion",
+    publisher: "Information Processing & Management",
+    year: "2020",
+    url: "https://doi.org/10.1016/j.ipm.2020.102316",
+    takeaway: "This comparative study examines how visual and textual garment features can be combined to capture complementary information for outfit recommendation.",
+    application: "LOOKU's garment records combine user-correctable attributes with image recognition. The app must not treat one photo or a generic embedding as reliable evidence of fit, fabric or personal suitability.",
+    limitation: "Benchmark gains are not a guarantee of individual recommendation quality. Image quality, category coverage and local preferences still need real-user evaluation.",
+  },
+  {
+    id: "fashion-zero-party-preferences",
+    title: "Development of a Fashion Recommendation System with Consumers' Zero-Party Data Applying the CART Decision-Tree Model",
+    publisher: "Journal of Fashion Marketing and Management",
+    year: "2026",
+    url: "https://doi.org/10.1108/JFMM-07-2024-0284",
+    takeaway: "This research studies whether self-reported consumer data can support a fashion recommendation model, using a decision-tree approach for product preference prediction.",
+    application: "LOOKU asks users directly about style, comfort and budget instead of inferring personal traits. Only preferences relevant to the requested styling task should influence a recommendation.",
+    limitation: "The study focuses on sock preferences and its purchasing context may differ from LOOKU. Self-reported preferences can change, so users must be able to edit or clear them.",
+  },
+  {
+    id: "fashion-explanation-experience",
+    title: "LLM-generated Content-based Explanations for User Experience in Fashion Recommender Systems",
+    publisher: "Fashion and Textiles · Springer Nature",
+    year: "2026",
+    url: "https://doi.org/10.1186/s40691-026-00464-z",
+    takeaway: "A 2026 study with 211 participants reports that informative, detailed content-based explanations improved recommendation satisfaction and trust in its tested fashion-commerce interface.",
+    application: "LOOKU should explain suggestions using the actual item categories, recorded colors, stated preferences and occasion requirements. Give the user enough evidence to judge the look rather than implying the model cannot be wrong.",
+    limitation: "The findings come from one study interface and product-recommendation setting; they do not prove that LOOKU recommendations are accurate or universally preferred.",
+  }
 ];
 
 export const RECOMMENDATION_RULES = [
@@ -137,7 +187,8 @@ export function getResearchPrompt(): string {
   return [
     "LOOKU STYLE RESEARCH LAYER (curated guidance, not universal rules):",
     ...RECOMMENDATION_RULES.map((rule, i) => (i + 1) + ". " + rule),
-    "Research basis: Utah State University Extension's clothing-design principles emphasize balance, proportion and visual harmony; Gray et al. (PLOS ONE, 2014, DOI 10.1371/journal.pone.0102772) report a moderate color-coordination effect in tested palettes; UNEP's 2023 textile circularity roadmap supports treating longer, more useful wear as a meaningful design goal.",
+    "Evidence notes (curated sources, not universal fashion laws):",
+    ...STYLE_RESEARCH_SOURCES.filter(source => source.id !== "whering-wardrobe-practices").map(source => source.publisher + " (" + source.year + "): " + source.application + " Source: " + source.url),
     "Do not claim research proves that one outfit is objectively best. Personal feedback, comfort, culture, event requirements and available garment data take precedence. Do not invent citations or imply a live internet search occurred."
   ].join("\n");
 }
