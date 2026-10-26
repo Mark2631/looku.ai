@@ -106,6 +106,8 @@ export function LookuApp() {
   const [generated, setGenerated] = useState<OutfitIdea[]>([]);
   const [styling, setStyling] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [stylingMethod, setStylingMethod] = useState<"ai" | "wardrobe-rules" | null>(null);
+  const [stylingNotice, setStylingNotice] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([{ role: "assistant", text: "Tell me where you're going, what mood you're after, or which item you want to wear. I'll build around pieces in your actual wardrobe." }]);
   const [chatInput, setChatInput] = useState("");
   const [modal, setModal] = useState<Modal>(null);
@@ -282,7 +284,7 @@ export function LookuApp() {
 
   async function generateLooks(prompt: string, requestedOccasion = occasion, fromChat = false) {
     if (availableItems.length < 2) { showToast("Add at least two available items to get started."); switchScreen("Closet"); return; }
-    setStyling(true); setAiError("");
+    setStyling(true); setAiError(""); setStylingNotice("");
     try {
       const now = Date.now();
       const upcomingEvents = calendarEvents.filter(event => {
@@ -301,7 +303,9 @@ export function LookuApp() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The stylist couldn't complete that request.");
       setGenerated(data.outfits || []);
-      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: "I've prepared " + (data.outfits || []).length + " look" + ((data.outfits || []).length === 1 ? "" : "s") + " using only clothes currently marked available. You can save a look or ask me to adjust it." }]);
+      setStylingMethod(data.method === "ai" ? "ai" : "wardrobe-rules");
+      setStylingNotice(typeof data.notice === "string" ? data.notice : "");
+      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.method === "wardrobe-rules" ? "I matched " : "I styled ") + (data.outfits || []).length + " look(s) from your real available clothes. " + (data.notice || "You can save a look or ask for adjustments.") }]);
       showToast("Your wardrobe edit is ready.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "The stylist is unavailable.";
@@ -885,7 +889,7 @@ export function LookuApp() {
       </div>
       <section className="section"><div className="section-head"><div><span className="eyebrow">YOUR NEW EDIT</span><h2 className="section-title">Outfit ideas</h2><p className="section-note">AI-generated suggestions are validated against actual available wardrobe item IDs.</p></div></div>
         {aiError && <div style={{ marginBottom: 15 }}><ErrorNotice>{aiError}</ErrorNotice></div>}
-        {generated.length ? <div className="stack">{generated.map((idea,index)=>renderOutfitIdea(idea,index))}</div> : <EmptyState icon={WandSparkles} title="Your next look starts here." body={availableItems.length<2 ? "Add at least two available pieces to your closet. The stylist won't invent garments for you." : "Describe a situation or generate three outfit ideas. Each option will use only clothes you own."} action={availableItems.length<2?"Open closet":"Generate outfit ideas"} onAction={()=>availableItems.length<2?switchScreen("Closet"):void generateLooks("Build three distinct outfits appropriate for my day.",occasion)}/>}
+        {generated.length ? <><div className="privacy-banner" style={{marginBottom:14}}><ShieldCheck/><span><strong>{stylingMethod === "wardrobe-rules" ? "Wardrobe matching mode" : "AI-styled using your wardrobe"}</strong> {stylingNotice || "Every recommended item belongs to your available wardrobe."}</span></div><div className="stack">{generated.map((idea,index)=>renderOutfitIdea(idea,index))}</div></> : <EmptyState icon={WandSparkles} title="Your next look starts here." body={availableItems.length<2 ? "Add at least two available pieces to your closet. The stylist won't invent garments for you." : "Describe a situation or generate three outfit ideas. Each option will use only clothes you own."} action={availableItems.length<2?"Open closet":"Generate outfit ideas"} onAction={()=>availableItems.length<2?switchScreen("Closet"):void generateLooks("Build three distinct outfits appropriate for my day.",occasion)}/>}
       </section>
     </>;
   }
