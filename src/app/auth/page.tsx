@@ -27,7 +27,7 @@ export default function AuthPage() {
         const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: (process.env.NEXT_PUBLIC_APP_URL || window.location.origin) + "/auth/callback" } });
         if (error) throw error;
         if (data.session) { router.replace("/"); router.refresh(); }
-        else setMessage("Check your email to confirm your account, then come back to LOOKU to sign in.");
+        else setMessage("Email confirmation is still enabled for this Supabase project. Disable Confirm email in Authentication → Sign In / Providers → Email to let new users sign in immediately.");
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
