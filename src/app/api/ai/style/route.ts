@@ -3,6 +3,7 @@ import { z } from "zod";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getResearchPrompt } from "@/lib/style-research";
+import { matchWardrobeOutfits } from "@/lib/wardrobe-outfit-matcher";
 
 export const runtime = "nodejs";
 const requestSchema = z.object({
@@ -79,9 +80,23 @@ export async function POST(request: NextRequest) {
       "Requested options: " + body.data.count,
       "User wardrobe (IDs are the only allowed item references): " + JSON.stringify(items)
     ].join("\n\n");
-    const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", prompt, temperature: 0.35, maxOutputTokens: 1500 });
-    const parsed = resultSchema.safeParse(parseJson(result.text));
-    if (!parsed.success) return NextResponse.json({ error: "The stylist returned a result we couldn't validate. Try a more specific occasion." }, { status: 502 });
+    const wardrobeFallback = () => {
+      const matching = matchWardrobeOutfits(items, body.data.occasion, body.data.count, recentlyWornItemIds);
+      if (!matching.length) return NextResponse.json({ error: "Your closet needs a complete combination: a top with bottoms, a dress, or swimwear for pool/beach activities. Add at least one more compatible piece." }, { status: 422 });
+      return NextResponse.json({ outfits: matching, method: "wardrobe-rules", notice: "AI model unavailable or returned an invalid result. These are rule-based matches made exclusively from your own available clothing." }, { headers: { "Cache-Control": "no-store" } });
+    };
+    let modelText: string;
+    try {
+      const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", prompt, temperature: 0.35, maxOutputTokens: 1500 });
+      modelText = result.text;
+    } catch (modelError) {
+      console.error("LOOKU model request failed", modelError instanceof Error ? modelError.message : "Unknown model error");
+      return wardrobeFallback();
+    }
+    let parsed: ReturnType<typeof resultSchema.safeParse>;
+    try { parsed = resultSchema.safeParse(parseJson(modelText)); }
+    catch { return wardrobeFallback(); }
+    if (!parsed.success) return wardrobeFallback();
     const validIds = new Set(items.map(item => item.id));
     const categoriesById = new Map(items.map(item => [item.id, item.category]));
     const availableShoesExist = items.some(item => item.category === "Shoes");
@@ -98,8 +113,8 @@ export async function POST(request: NextRequest) {
         const hasCompleteCore = hasDress || (hasTop && hasBottom) || (isSwimOccasion && hasSwimwear);
         return hasCompleteCore && (!availableShoesExist || hasShoes);
       });
-    if (!outfits.length) return NextResponse.json({ error: "I couldn't form a complete outfit with the clothes marked available. Add a top and bottom, a dress, or swimwear for a beach/pool occasion, plus suitable available footwear where needed." }, { status: 422 });
-    return NextResponse.json({ outfits }, { headers: { "Cache-Control": "no-store" } });
+    if (!outfits.length) return wardrobeFallback();
+    return NextResponse.json({ outfits, method: "ai" }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("LOOKU stylist error", error instanceof Error ? error.message : "Unknown error");
     return NextResponse.json({ error: "The AI stylist is temporarily unavailable. Check the AI Gateway connection in Vercel, then try again." }, { status: 503 });
