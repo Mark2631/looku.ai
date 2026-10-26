@@ -14,6 +14,7 @@ type StoreProduct = {
 type OutfitIdea = { title: string; style: string; reason: string; itemIds: string[]; confidenceNote?: string };
 type OccasionPlaybook = { id: string; occasion: string; display_name: string; dress_codes: string[]; priorities: string[]; styling_guidance: string; shopping_guidance: string; cultural_note: string; source_urls: string[]; sort_order: number };
 type ShoppingGapGuide = { id: string; occasion: string; category: string; when_to_consider: string; alternatives: string; budget_guidance: string; source_urls: string[] };
+type MerchantSource = { id: string; name: string; website: string; categories: string[]; business_model: string; integration_path: string; public_evidence: string; source_url: string; relationship_status: string };
 
 const EVENTS = [
   { name: "Birthday", dressCode: "Celebration", note: "A standout piece, comfortable shoes and one intentional accessory usually go further than buying a full new outfit." },
@@ -56,12 +57,20 @@ export function OccasionStudio({
   const [playbooks, setPlaybooks] = useState<OccasionPlaybook[]>([]);
   const [gapGuides, setGapGuides] = useState<ShoppingGapGuide[]>([]);
   const [researchAvailable, setResearchAvailable] = useState(false);
+  const [merchantSources, setMerchantSources] = useState<MerchantSource[]>([]);
   useEffect(() => {
     let live = true;
-    fetch("/api/style/occasion-playbooks", { cache: "no-store" }).then(async response => {
-      if (!response.ok) throw new Error("research unavailable");
-      return response.json();
-    }).then(data => { if (live) { setPlaybooks(data.playbooks || []); setGapGuides(data.shoppingGapGuides || []); setResearchAvailable(true); } }).catch(() => { if (live) setResearchAvailable(false); });
+    Promise.all([
+      fetch("/api/style/occasion-playbooks", { cache: "no-store" }).then(async response => { if (!response.ok) throw new Error("research unavailable"); return response.json(); }),
+      fetch("/api/style/merchant-sources", { cache: "no-store" }).then(async response => { if (!response.ok) throw new Error("merchant research unavailable"); return response.json(); }),
+    ]).then(([research, merchants]) => {
+      if (live) {
+        setPlaybooks(research.playbooks || []);
+        setGapGuides(research.shoppingGapGuides || []);
+        setMerchantSources(merchants.sources || []);
+        setResearchAvailable(true);
+      }
+    }).catch(() => { if (live) setResearchAvailable(false); });
     return () => { live = false; };
   }, []);
   const selectedEvent = EVENTS.find(event => event.name === eventName) || EVENTS[0];
