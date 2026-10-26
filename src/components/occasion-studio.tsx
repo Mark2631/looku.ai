@@ -39,12 +39,13 @@ const CATEGORY_NEEDS: Record<string, string[]> = {
 };
 
 export function OccasionStudio({
-  items, products, generated, styling, onGenerate, onPlan, onRenderLook,
+  items, products, generated, styling, onGenerate, onPlan, onRenderLook, onSaveWishlist,
 }: {
   items: WardrobePiece[]; products: StoreProduct[]; generated: OutfitIdea[]; styling: boolean;
   onGenerate: (prompt: string, occasion: string) => void;
   onPlan: (date: string, title: string, occasion: string) => void;
   onRenderLook: (idea: OutfitIdea, index: number) => ReactNode;
+  onSaveWishlist: (title: string, url: string, note: string) => Promise<void>;
 }) {
   const [eventName, setEventName] = useState("Birthday");
   const [eventDate, setEventDate] = useState("");
@@ -58,6 +59,10 @@ export function OccasionStudio({
   const [gapGuides, setGapGuides] = useState<ShoppingGapGuide[]>([]);
   const [researchAvailable, setResearchAvailable] = useState(false);
   const [merchantSources, setMerchantSources] = useState<MerchantSource[]>([]);
+  const [externalProductTitle, setExternalProductTitle] = useState("");
+  const [externalProductUrl, setExternalProductUrl] = useState("");
+  const [externalProductNote, setExternalProductNote] = useState("");
+  const [savingWishlist, setSavingWishlist] = useState(false);
   useEffect(() => {
     let live = true;
     Promise.all([
@@ -96,6 +101,21 @@ export function OccasionStudio({
     .filter(product => product.currency === "KES" && (product.price == null || !Number.isFinite(budgetNumber) || budgetNumber <= 0 || product.price <= budgetNumber))
     .slice(0, 8);
   const shoppingOptions = matchingProducts.length ? matchingProducts : productFallback;
+
+  async function saveExternalProduct(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!externalProductTitle.trim() || !externalProductUrl.trim()) return;
+    let url: URL;
+    try { url = new URL(externalProductUrl); } catch { return; }
+    if (url.protocol !== "https:") return;
+    setSavingWishlist(true);
+    try {
+      await onSaveWishlist(externalProductTitle.trim(), url.toString(), externalProductNote.trim() || "Consider for " + eventName + ". Budget: KES " + (budget || "not set") + ".");
+      setExternalProductTitle("");
+      setExternalProductUrl("");
+      setExternalProductNote("");
+    } finally { setSavingWishlist(false); }
+  }
 
   function generate() {
     const prompt = [
@@ -176,7 +196,7 @@ export function OccasionStudio({
           {shoppingOptions.length ? <div className="product-grid">{shoppingOptions.map(product=><article className="product-card" key={product.id}>
             {product.image_url ? <img src={product.image_url} alt={product.title} loading="lazy"/> : <div style={{height:180,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={27}/></div>}
             <div className="piece-info"><span className="eyebrow">{product.merchant}</span><h3>{product.title}</h3><p className="small muted">{product.price == null ? "Price not listed" : product.currency+" "+product.price.toLocaleString()}</p><a className="button primary compact" href={product.affiliate_url || product.product_url} target="_blank" rel="noopener noreferrer">View at retailer <ExternalLink size={12}/></a></div>
-          </article>)}</div> : <div className="surface soft"><div className="row"><CircleAlert size={20}/><strong>No verified shop items match this event yet.</strong></div><p className="small muted" style={{lineHeight:1.7}}>LOOKU does not fill this space with fake products or invented prices. You can still style your closet, or browse a retailer directly while our approved merchant catalogue is being established.</p><div className="stack" style={{marginTop:14}}>{merchantSources.map(source=><article className="surface row" key={source.id} style={{alignItems:"start",gap:12,boxShadow:"none"}}><div style={{flex:1,minWidth:0}}><strong>{source.name}</strong><p className="tiny muted" style={{lineHeight:1.6,margin:"5px 0"}}>{source.public_evidence}</p><span className="badge neutral">Research lead · Not a partner</span></div><a className="button compact" href={source.website} target="_blank" rel="noopener noreferrer">Visit site <ExternalLink size={12}/></a></article>)}</div><p className="tiny muted" style={{marginTop:10}}>These are researched external retailers, not LOOKU partners. Their products, current prices, sizes and stock have not been verified through a live feed.</p></div>}
+          </article>)}</div> : <div className="surface soft"><div className="row"><CircleAlert size={20}/><strong>No verified shop items match this event yet.</strong></div><p className="small muted" style={{lineHeight:1.7}}>LOOKU does not fill this space with fake products or invented prices. You can still style your closet, or browse a retailer directly while our approved merchant catalogue is being established.</p><div className="stack" style={{marginTop:14}}>{merchantSources.map(source=><article className="surface row" key={source.id} style={{alignItems:"start",gap:12,boxShadow:"none"}}><div style={{flex:1,minWidth:0}}><strong>{source.name}</strong><p className="tiny muted" style={{lineHeight:1.6,margin:"5px 0"}}>{source.public_evidence}</p><span className="badge neutral">Research lead · Not a partner</span></div><a className="button compact" href={source.website} target="_blank" rel="noopener noreferrer">Visit site <ExternalLink size={12}/></a></article>)}</div><p className="tiny muted" style={{marginTop:10}}>These are researched external retailers, not LOOKU partners. Their products, current prices, sizes and stock have not been verified through a live feed.</p><form className="surface" style={{marginTop:16}} onSubmit={saveExternalProduct}><strong>Found something worth considering?</strong><p className="tiny muted" style={{lineHeight:1.6}}>Open a retailer, copy the exact product URL and save it to your private wishlist. LOOKU does not scrape the page or claim its current stock.</p><label className="field">Item name<input className="input" required maxLength={160} value={externalProductTitle} onChange={event=>setExternalProductTitle(event.target.value)} placeholder="e.g. Black loafers"/></label><label className="field">Product page URL<input className="input" required type="url" value={externalProductUrl} onChange={event=>setExternalProductUrl(event.target.value)} placeholder="https://retailer.example/product"/></label><label className="field">Why it might work<input className="input" maxLength={500} value={externalProductNote} onChange={event=>setExternalProductNote(event.target.value)} placeholder="What would it pair with?"/></label><button className="button primary" disabled={savingWishlist}>{savingWishlist?"Saving…":"Save to my wishlist"}</button></form></div>}
         </div>}
     </section>
 
