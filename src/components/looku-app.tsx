@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight,
   CircleHelp, CloudSun, Heart, House, ImagePlus, Layers3, LogOut, Menu, MessageCircle, Plus, Search, Settings, Shirt,
@@ -25,7 +26,7 @@ type Outfit = {
   cover_url?: string | null; worn_at: string | null; created_at: string; item_ids: string[];
 };
 type OutfitPlan = { id: string; user_id: string; plan_date: string; event_title: string; occasion: string; notes: string | null; outfit_id: string | null; created_at: string };
-type Product = { id: string; title: string; description: string | null; category: string; brand: string | null; merchant: string; currency: string; price: number | null; image_url: string | null; product_url: string; affiliate_url: string | null; country_code: string[]; sizes: string[] };
+type Product = { id: string; title: string; description: string | null; category: string; brand: string | null; merchant: string; currency: string; price: number | null; image_url: string | null; product_url: string; affiliate_url: string | null; country_code: string[]; sizes: string[]; is_active?: boolean; is_approved?: boolean };
 type Wish = { id: string; user_id: string; title: string; product_url: string | null; note: string | null; created_at: string };
 type Profile = { full_name: string | null; style_preferences: Record<string, unknown>; onboarding_completed: boolean };
 type Modal = "garment" | "plan" | "wish" | "look" | "merchant" | "product" | "feedback" | null;
