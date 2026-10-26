@@ -75,6 +75,7 @@ export function TryOnRoom({ userId, items, configured }: { userId: string; items
     setBusy(true);
     setStatus("uploading");
     let uploadedPath = "";
+    let jobAccepted = false;
     try {
       const supabase = createClient();
       uploadedPath = userId + "/tryon/" + crypto.randomUUID() + "-" + photo.name.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(-80);
@@ -90,12 +91,13 @@ export function TryOnRoom({ userId, items, configured }: { userId: string; items
       const data = await response.json() as { jobId?: string; status?: string; error?: string };
       if (!response.ok || !data.jobId) throw new Error(data.error || "Couldn't start the virtual fitting.");
       setJobId(data.jobId);
+      jobAccepted = true;
       setStatus(data.status || "queued");
       await pollUntilDone(data.jobId);
     } catch (caught) {
       setStatus("failed");
       setError(caught instanceof Error ? caught.message : "The fitting-room request failed.");
-      if (uploadedPath) {
+      if (uploadedPath && !jobAccepted) {
         try { await createClient().storage.from("wardrobe-private").remove([uploadedPath]); } catch { /* User can remove leftover private files through account data deletion. */ }
       }
     } finally { setBusy(false); }
