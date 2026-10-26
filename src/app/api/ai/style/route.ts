@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the LOOKU database migration before using the stylist." }, { status: 503 });
-    if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
+    if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit of 10 operations. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
 
     const { data: items, error: itemsError } = await supabase.from("wardrobe_items").select("id,name,brand,category,colors,pattern,formality,seasons,style_tags,status,attributes").eq("user_id", user.id).eq("is_owned", true).eq("status", "available").limit(120);
     if (itemsError) return NextResponse.json({ error: "Couldn't read your wardrobe. Please try again." }, { status: 500 });
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       "Requested options: " + body.data.count,
       "User wardrobe (IDs are the only allowed item references): " + JSON.stringify(items)
     ].join("\n\n");
-    const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-2.5-flash", prompt, temperature: 0.35, maxOutputTokens: 1500 });
+    const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", prompt, temperature: 0.35, maxOutputTokens: 1500 });
     const parsed = resultSchema.safeParse(parseJson(result.text));
     if (!parsed.success) return NextResponse.json({ error: "The stylist returned a result we couldn't validate. Try a more specific occasion." }, { status: 502 });
     const validIds = new Set(items.map(item => item.id));
