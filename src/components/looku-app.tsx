@@ -51,8 +51,8 @@ const navItems: { id: Screen; label: string; icon: typeof House; group?: string 
   { id: "Insights", label: "Style intelligence", icon: CircleHelp, group: "DISCOVER" },
   { id: "Settings", label: "Preferences", icon: Settings, group: "ACCOUNT" },
 ];
-const categories = ["All", "Tops", "Bottoms", "Shoes", "Outerwear", "Dresses", "Accessories", "Activewear", "Sleepwear", "Bags", "Other"];
-const occasions = ["Everyday", "Work / Presentation", "Event / Date", "Wedding / Celebration", "Campus", "Travel", "Gym / Active", "Relaxed / Home", "Church / Ceremony", "Dinner"];
+const categories = ["All", "Tops", "Bottoms", "Shoes", "Outerwear", "Dresses", "Swimwear", "Accessories", "Activewear", "Sleepwear", "Bags", "Other"];
+const occasions = ["Everyday", "Birthday", "Graduation", "Date night", "Wedding guest", "Campus event", "Job interview", "Dinner", "Family celebration", "Church or faith ceremony", "Workday", "Travel day", "Outdoor event", "Gym or active", "Formal event", "Online interview", "Campus date", "Conference / networking", "Concert / festival", "Beach or pool day", "Photoshoot", "Baby shower", "First day at work", "Relaxed / Home", "Work / Presentation", "Event / Date", "Wedding / Celebration", "Campus", "Travel", "Gym / Active", "Church / Ceremony"];
 const styles = ["Relaxed minimal", "Smart casual", "Streetwear", "Classic elegance", "Colorful creative", "Comfort-first", "Modest and polished"];
 const heroImage = "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=85";
 
