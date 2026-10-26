@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 export const runtime = "nodejs";
 
-async function listAllObjectPaths(client: ReturnType<typeof createSupabaseClient>, basePath: string): Promise<string[]> {
+async function listAllObjectPaths(client: SupabaseClient<any, any, any>, basePath: string): Promise<string[]> {
   const found: string[] = [];
   async function walk(path: string): Promise<void> {
     let offset = 0;
