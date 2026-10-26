@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, CalendarDays, CheckCircle2, CircleAlert, ExternalLink, Heart, Shirt, ShoppingBag, Sparkles, Wallet } from "lucide-react";
 
 type WardrobePiece = {
@@ -12,6 +12,8 @@ type StoreProduct = {
   currency: string; price: number | null; image_url: string | null; product_url: string; affiliate_url: string | null;
 };
 type OutfitIdea = { title: string; style: string; reason: string; itemIds: string[]; confidenceNote?: string };
+type OccasionPlaybook = { id: string; occasion: string; display_name: string; dress_codes: string[]; priorities: string[]; styling_guidance: string; shopping_guidance: string; cultural_note: string; source_urls: string[]; sort_order: number };
+type ShoppingGapGuide = { id: string; occasion: string; category: string; when_to_consider: string; alternatives: string; budget_guidance: string; source_urls: string[] };
 
 const EVENTS = [
   { name: "Birthday", dressCode: "Celebration", note: "A standout piece, comfortable shoes and one intentional accessory usually go further than buying a full new outfit." },
@@ -51,7 +53,20 @@ export function OccasionStudio({
   const [priority, setPriority] = useState("Use my wardrobe first");
   const [notes, setNotes] = useState("");
   const [activeTab, setActiveTab] = useState<"outfit" | "shopping">("outfit");
+  const [playbooks, setPlaybooks] = useState<OccasionPlaybook[]>([]);
+  const [gapGuides, setGapGuides] = useState<ShoppingGapGuide[]>([]);
+  const [researchAvailable, setResearchAvailable] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/style/occasion-playbooks", { cache: "no-store" }).then(async response => {
+      if (!response.ok) throw new Error("research unavailable");
+      return response.json();
+    }).then(data => { if (live) { setPlaybooks(data.playbooks || []); setGapGuides(data.shoppingGapGuides || []); setResearchAvailable(true); } }).catch(() => { if (live) setResearchAvailable(false); });
+    return () => { live = false; };
+  }, []);
   const selectedEvent = EVENTS.find(event => event.name === eventName) || EVENTS[0];
+  const selectedPlaybook = playbooks.find(playbook => playbook.occasion.toLowerCase() === eventName.toLowerCase()) || null;
+  const eventGapGuides = gapGuides.filter(guide => guide.occasion.toLowerCase() === eventName.toLowerCase());
   const readyItems = items.filter(item => item.is_owned && item.status === "available");
   const ownedCategories = useMemo(() => new Set(readyItems.map(item => item.category)), [readyItems]);
   const missingCategories = (CATEGORY_NEEDS[eventName] || CATEGORY_NEEDS.Birthday).filter(category => {
@@ -81,7 +96,10 @@ export function OccasionStudio({
       "First use my own available clothes. Do not invent garments or product inventory. For each look explain which actual owned items are used, what if anything is missing, and why it fits the occasion.",
       "Only suggest purchases if they materially improve the look. Keep the full proposed purchase list within KES " + (budget || "unspecified") + ".",
       "Personal details: " + (notes || "none provided") + ".",
-      "Style guidance: " + selectedEvent.note,
+      "Style guidance: " + (selectedPlaybook?.styling_guidance || selectedEvent.note),
+      "Shopping guidance: " + (selectedPlaybook?.shopping_guidance || "Use existing clothes first; only suggest a purchase for a documented gap."),
+      "Cultural/context guidance: " + (selectedPlaybook?.cultural_note || "Ask rather than assume cultural requirements."),
+      "Research sources: " + (selectedPlaybook?.source_urls || []).join(", "),
     ].join("\n");
     onGenerate(prompt, eventName);
     setActiveTab("outfit");
@@ -123,7 +141,8 @@ export function OccasionStudio({
       <label className="field" style={{marginTop:12}}>Anything else? (optional)
         <textarea className="input textarea" rows={2} maxLength={500} value={notes} onChange={event => setNotes(event.target.value)} placeholder="Colours you like, cultural expectations, comfort needs, who you're going with…" />
       </label>
-      <div className="privacy-banner" style={{marginTop:14}}><Sparkles/><span>{selectedEvent.note}</span></div>
+      <div className="privacy-banner" style={{marginTop:14}}><Sparkles/><span>{selectedPlaybook?.styling_guidance || selectedEvent.note}{selectedPlaybook?.cultural_note ? " " + selectedPlaybook.cultural_note : ""}</span></div>
+      <p className="tiny muted" style={{marginTop:8}}>{researchAvailable ? "Research-backed occasion playbook loaded from LOOKU database." : "Using built-in occasion guidance while the research service reconnects."}{selectedPlaybook?.source_urls?.length ? " Sources: " + selectedPlaybook.source_urls.length + "." : ""}</p>
       <div className="row" style={{marginTop:16,flexWrap:"wrap"}}>
         <span className="badge neutral"><Shirt size={13}/>{readyItems.length} available pieces</span>
         <span className="badge neutral"><ShoppingBag size={13}/>{products.length} approved shop items</span>
