@@ -31,6 +31,9 @@ type Wish = { id: string; user_id: string; title: string; product_url: string | 
 type Profile = { full_name: string | null; style_preferences: Record<string, unknown>; onboarding_completed: boolean };
 type Modal = "garment" | "plan" | "wish" | "look" | "merchant" | "product" | "feedback" | null;
 type ChatMessage = { role: "user" | "assistant"; text: string };
+type CalendarEvent = { id: string; title: string; description: string; location: string; start: string; end: string; url: string | null };
+type CalendarPayload = { configured: boolean; connected: boolean; accountEmail?: string | null; events: CalendarEvent[]; message?: string; error?: string };
+type WeatherPayload = { location: { name: string; region: string; country: string }; current: { tempC: number; feelsLikeC: number; condition: string; icon: string; humidity: number; windKph: number; precipitationMm: number; updatedAt: string } };
 
 const navItems: { id: Screen; label: string; icon: typeof House; group?: string }[] = [
   { id: "Today", label: "Today", icon: House, group: "YOUR SPACE" },
@@ -56,6 +59,12 @@ function formatDate(value: string, options: Intl.DateTimeFormatOptions = { weekd
 }
 function getInitials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || "").join("") || "L";
+}
+async function fetchCalendarSnapshot(): Promise<CalendarPayload> {
+  const response = await fetch("/api/calendar/events", { cache: "no-store" });
+  const data = await response.json() as CalendarPayload;
+  if (!response.ok) throw new Error(data.error || "Could not load Google Calendar.");
+  return data;
 }
 function safeHostname(raw: string | null | undefined) { try { return raw ? new URL(raw).hostname : ""; } catch { return ""; } }
 function safeExternalUrl(raw: string | null | undefined) {
@@ -102,6 +111,12 @@ export function LookuApp() {
   const [admin, setAdmin] = useState(false);
   const [adminProducts, setAdminProducts] = useState<Product[]>([]);
   const [adminError, setAdminError] = useState("");
+  const [calendarStatus, setCalendarStatus] = useState<CalendarPayload>({ configured: false, connected: false, events: [] });
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarMessage, setCalendarMessage] = useState("");
+  const [weather, setWeather] = useState<WeatherPayload | null>(null);
+  const [weatherMessage, setWeatherMessage] = useState("");
 
   const showToast = useCallback((message: string) => { setToastMessage(message); window.setTimeout(() => setToastMessage(""), 3000); }, []);
 
@@ -184,6 +199,52 @@ export function LookuApp() {
   }, [configured, loadData]);
 
   useEffect(() => {
+    if (!ready) return;
+    const status = new URLSearchParams(window.location.search).get("calendar");
+    if (!status) return;
+    const messages: Record<string, string> = {
+      connected: "Google Calendar connected. Your upcoming events are now available in the planner.",
+      not_configured: "Google Calendar setup is incomplete. Server-side OAuth credentials and encrypted token storage must be configured first.",
+      cancelled: "Google Calendar connection was cancelled.",
+      state_error: "Calendar authorization could not be verified. Start the connection again.",
+      token_error: "Google did not authorize the calendar connection. Check the OAuth client and redirect URI.",
+      refresh_token_missing: "Google did not issue a refresh token. Remove LOOKU from Google Account access and reconnect with offline access.",
+      save_error: "Google authorized the connection, but LOOKU could not safely store its encrypted credentials.",
+      provider_error: "Google Calendar couldn't be connected. Please retry.",
+    };
+    setToastMessage(messages[status] || "Calendar connection status updated.");
+    if (status === "connected") setScreen("Plan");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [ready]);
+
+  useEffect(() => {
+    if (!configured || !user || screen !== "Plan") return;
+    let active = true;
+    setCalendarLoading(true);
+    setCalendarMessage("");
+    fetchCalendarSnapshot().then(data => {
+      if (!active) return;
+      setCalendarStatus(data); setCalendarEvents(data.events || []);
+      if (data.message) setCalendarMessage(data.message);
+    }).catch(error => { if (active) setCalendarMessage(error instanceof Error ? error.message : "Calendar events could not be loaded."); })
+      .finally(() => { if (active) setCalendarLoading(false); });
+    return () => { active = false; };
+  }, [configured, user?.id, screen]);
+
+  useEffect(() => {
+    if (!configured || !user || !weatherCity || screen !== "Today") { setWeather(null); setWeatherMessage(""); return; }
+    let active = true;
+    fetch("/api/weather?city=" + encodeURIComponent(weatherCity), { cache: "no-store" }).then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Weather could not be loaded.");
+      return data as WeatherPayload;
+    }).then(data => { if (active) { setWeather(data); setWeatherMessage(""); } }).catch(error => {
+      if (active) { setWeather(null); setWeatherMessage(error instanceof Error ? error.message : "Weather could not be loaded."); }
+    });
+    return () => { active = false; };
+  }, [configured, user?.id, weatherCity, screen]);
+
+  useEffect(() => {
     if (!toastMessage) return;
     const id = window.setTimeout(() => setToastMessage(""), 2800);
     return () => window.clearTimeout(id);
@@ -195,6 +256,7 @@ export function LookuApp() {
   const todayPlans = useMemo(() => plans.filter(p => p.plan_date === todayIso()), [plans]);
   const styleName = String(profile.style_preferences?.style || "Relaxed minimal");
   const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
+  const weatherCity = typeof profile.style_preferences?.locationCity === "string" ? String(profile.style_preferences.locationCity).trim() : "";
 
   function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
 
