@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 const requestSchema = z.object({ imagePath: z.string().min(3).max(500), suggestedName: z.string().max(100).optional() });
 const attributesSchema = z.object({
   name: z.string().min(1).max(100),
-  category: z.enum(["Tops","Bottoms","Shoes","Outerwear","Dresses","Accessories","Activewear","Sleepwear","Bags","Other"]),
+  category: z.enum(["Tops","Bottoms","Shoes","Outerwear","Dresses","Swimwear","Accessories","Activewear","Sleepwear","Bags","Other"]),
   colors: z.array(z.string().max(30)).max(5),
   pattern: z.string().max(60),
   formality: z.number().int().min(1).max(10),
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the database migration first." }, { status: 503 });
     if (!allowed) return NextResponse.json({ error: "Today's allowance of 20 AI operations has been used. You can still add this garment manually." }, { status: 429 });
     const mimeType = file.type === "image/png" ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
-    const prompt = "Identify the single main clothing item in this photo for a private digital wardrobe. If there are multiple pieces, identify the clearest primary garment. Do not claim exact fabric or brand without visual evidence. Use conservative attributes. Formality is 1 (sleepwear/gym) to 10 (formal occasion). Return JSON only with keys name,category,colors,pattern,formality,seasons,style_tags,description. Allowed categories: Tops,Bottoms,Shoes,Outerwear,Dresses,Accessories,Activewear,Sleepwear,Bags,Other. Allowed seasons: hot,mild,cold,rainy,all-season. Suggested user name: " + (parsedBody.data.suggestedName || "none") + ".";
+    const prompt = "Identify the single main clothing item in this photo for a private digital wardrobe. If there are multiple pieces, identify the clearest primary garment. Do not claim exact fabric or brand without visual evidence. Use conservative attributes. Formality is 1 (sleepwear/gym) to 10 (formal occasion). Return JSON only with keys name,category,colors,pattern,formality,seasons,style_tags,description. Allowed categories: Tops,Bottoms,Shoes,Outerwear,Dresses,Swimwear,Accessories,Activewear,Sleepwear,Bags,Other. Use Swimwear for swimsuits and swim-specific garments; do not use it for ordinary tops or shorts. Allowed seasons: hot,mild,cold,rainy,all-season. Suggested user name: " + (parsedBody.data.suggestedName || "none") + ".";
     const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image", image, mediaType: mimeType }] }], temperature: 0.15, maxOutputTokens: 650 });
     const attrs = attributesSchema.safeParse(parseJson(result.text));
     if (!attrs.success) return NextResponse.json({ error: "We couldn't confidently classify that image. You can keep the garment and edit its details manually." }, { status: 502 });
