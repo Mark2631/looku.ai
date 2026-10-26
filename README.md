@@ -7,6 +7,8 @@ LOOKU is a mobile-first personal fashion platform: a private digital wardrobe, a
 - Next.js App Router and TypeScript, deployed on Vercel.
 - Supabase Auth (cookie-based SSR sessions), PostgreSQL, Row Level Security and private Storage.
 - Vercel AI Gateway / AI SDK for image classification and wardrobe-aware outfit generation.
+- Embedded style-research library with cited design principles, wardrobe-first circularity and explicit limitations.
+- Optional FASHN virtual try-on integration with a user-controlled photo upload, private output storage, and a two-per-day quota.
 - Optional, read-only Google Calendar OAuth with encrypted server-side tokens.
 - Optional WeatherAPI current conditions based on a city the user chooses.
 - Responsive PWA shell with private user data excluded from offline caching.
@@ -41,6 +43,12 @@ See .env.example. Never commit .env.local, provider secrets or the Supabase serv
 ## Deployment
 
 Import Mark2631/looku.ai into the intended Vercel team. Add the environment variables from .env.example to the appropriate Vercel environments, run the migration, and configure Supabase Auth redirect URLs for the deployed app. The /api/health endpoint reports configuration flags without exposing secret values.
+
+## Research and integrations
+
+The Style Intelligence screen presents the source, takeaway, product application and limitations of each research item. Research is injected into the stylist prompt as guidance; it is not treated as a universal fashion law. Recommendation logic prioritizes available owned garments, occasion and personal constraints, then balances color/category and wear-history signals. Actual weather and calendar context are sent only when configured, available and user-authorized.
+
+The virtual fitting room uses a paid FASHN API only after the user submits a photo and chooses a garment. It uses a small daily quota, short-lived image URLs and private result storage. Generated previews are illustrative and are not fit/sizing guarantees. Review current provider terms, image handling and pricing before enabling the key. No paid credentials are committed to GitHub.
 
 ## Product boundaries
 
