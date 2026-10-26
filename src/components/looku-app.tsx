@@ -608,6 +608,18 @@ export function LookuApp() {
     return outfitItems(outfit).find(item => item.image_url)?.image_url || heroImage;
   }
 
+  function replaceGeneratedPiece(outfitIndex: number, originalId: string, replacementId: string) {
+    const replacement = availableItems.find(item => item.id === replacementId);
+    const original = availableItems.find(item => item.id === originalId);
+    if (!replacement || !original || replacement.category !== original.category) return;
+    setGenerated(previous => previous.map((idea, index) => index !== outfitIndex ? idea : ({
+      ...idea,
+      itemIds: idea.itemIds.map(id => id === originalId ? replacementId : id),
+      reason: "You swapped " + original.name + " for " + replacement.name + ". Review the updated combination and save it if it works for you.",
+    })));
+    showToast("Piece replaced. The rest of the look stayed in place.");
+  }
+
   function renderOutfitIdea(idea: OutfitIdea, index: number) {
     const pieces = outfitItems(idea);
     return <article className="surface" key={idea.title + index} style={{ padding: 16 }}>
@@ -615,7 +627,7 @@ export function LookuApp() {
         <div><span className="badge">{idea.style || "Personal edit"}</span><h3 style={{ fontSize: 21, fontWeight: 500, fontFamily: "Georgia,serif", margin: "11px 0 6px" }}>{idea.title}</h3><p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>{idea.reason}</p></div>
         <span className="badge neutral">LOOK {index + 1}</span>
       </div>
-      <div className="outfit-composition">{pieces.map(item => <div className="piece-card" key={item.id}><img src={item.image_url || ""} alt={item.name} loading="lazy"/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category} · {(item.colors || []).slice(0,2).join(", ") || "Color not set"}</span></div></div>)}</div>
+      <div className="outfit-composition">{pieces.map(item => <div className="piece-card" key={item.id}><img src={item.image_url || ""} alt={item.name} loading="lazy"/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category} · {(item.colors || []).slice(0,2).join(", ") || "Color not set"}</span><select aria-label={"Replace "+item.name} className="input" value={item.id} onChange={e=>replaceGeneratedPiece(index,item.id,e.target.value)} style={{padding:"7px",fontSize:10,marginTop:8}}>{availableItems.filter(candidate=>candidate.category===item.category&&(candidate.id===item.id||!idea.itemIds.includes(candidate.id))).map(candidate=><option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></div></div>)}</div>
       {idea.confidenceNote && <p className="tiny muted" style={{ margin: "12px 0 0" }}>{idea.confidenceNote}</p>}
       <div className="tool-row" style={{ marginTop: 14 }}>
         <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button>
