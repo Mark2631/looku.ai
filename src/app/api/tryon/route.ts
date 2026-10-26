@@ -56,12 +56,9 @@ export async function POST(request: NextRequest) {
   if (quotaError) return NextResponse.json({ error: "Try-on quota controls are not ready. Apply the virtual try-on migration before starting a job." }, { status: 503 });
   if (!quotaAllowed) return NextResponse.json({ error: "You've reached the current limit of two try-on generations per day. This helps protect your credit balance." }, { status: 429 });
 
-  const [{ data: personSigned, error: personUrlError }, { data: garmentSigned, error: garmentUrlError }] = await Promise.all([
-    session.storage.from("wardrobe-private").createSignedUrl(imagePath, 600),
-    session.storage.from("wardrobe-private").createSignedUrl(item.image_path, 600),
-  ]);
-  if (personUrlError || garmentUrlError || !personSigned?.signedUrl || !garmentSigned?.signedUrl) {
-    return NextResponse.json({ error: "Couldn't create private, short-lived image links. No provider request was sent." }, { status: 500 });
+  const { data: garmentSigned, error: garmentUrlError } = await session.storage.from("wardrobe-private").createSignedUrl(item.image_path, 600);
+  if (garmentUrlError || !garmentSigned?.signedUrl) {
+    return NextResponse.json({ error: "Couldn't create a private, short-lived garment image link. No provider request was sent." }, { status: 500 });
   }
 
   const { data: job, error: jobError } = await admin.from("tryon_jobs").insert({
