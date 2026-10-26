@@ -1,4 +1,4 @@
--- LOOKU initial schema. Apply only to a dedicated Supabase project.
+-- LOOKU initial schema. Apply only to the intended LOOKU Supabase project after checking that it is not shared with another app.
 create extension if not exists pgcrypto;
 create schema if not exists private;
 
