@@ -28,6 +28,12 @@ export const OCCASION_CATEGORY_NEEDS: Record<string, string[]> = {
   "Formal event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
   "Online interview": ["Tops", "Bottoms", "Dresses", "Outerwear"],
   "Campus date": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
+  "Conference / networking": ["Tops", "Bottoms", "Shoes", "Outerwear"],
+  "Concert / festival": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear", "Accessories"],
+  "Beach or pool day": ["Swimwear", "Shoes", "Accessories"],
+  "Photoshoot": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
+  "Baby shower": ["Tops", "Bottoms", "Dresses", "Shoes"],
+  "First day at work": ["Tops", "Bottoms", "Shoes", "Outerwear"],
 };
 
 export function findOccasionGaps(items: OccasionWardrobeItem[], occasion: string): string[] {
@@ -39,19 +45,24 @@ export function findOccasionGaps(items: OccasionWardrobeItem[], occasion: string
   const hasDress = ownedCategories.has("Dresses");
   const hasTop = ownedCategories.has("Tops");
   const hasBottom = ownedCategories.has("Bottoms");
-  const hasCompleteCore = hasDress || (hasTop && hasBottom);
+  const needs = OCCASION_CATEGORY_NEEDS[occasion] || OCCASION_CATEGORY_NEEDS.Birthday;
+  const swimwearIsCore = needs.includes("Swimwear");
+  const hasSwimwear = ownedCategories.has("Swimwear");
+  const hasCompleteCore = hasDress || (hasTop && hasBottom) || (swimwearIsCore && hasSwimwear);
   const gaps: string[] = [];
 
-  if (!hasCompleteCore) {
+  if (swimwearIsCore) {
+    if (!hasSwimwear) gaps.push("Swimwear");
+  } else if (!hasCompleteCore) {
     if (!hasTop && !hasBottom && !hasDress) gaps.push("Dresses", "Tops", "Bottoms");
     else if (hasTop && !hasBottom) gaps.push("Bottoms", "Dresses");
     else if (hasBottom && !hasTop) gaps.push("Tops", "Dresses");
   }
 
-  const needs = OCCASION_CATEGORY_NEEDS[occasion] || OCCASION_CATEGORY_NEEDS.Birthday;
   if (needs.includes("Shoes") && !ownedCategories.has("Shoes")) gaps.push("Shoes");
-  if (["Travel day", "Outdoor event"].includes(occasion) && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
+  if (["Travel day", "Outdoor event", "Concert / festival"].includes(occasion) && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
   if (needs.includes("Activewear") && !ownedCategories.has("Activewear")) gaps.push("Activewear");
+  if (needs.includes("Accessories") && !ownedCategories.has("Accessories")) gaps.push("Accessories");
 
   // An owned dress is a valid core outfit by itself. Do not tell the user to buy a top/bottom
   // just because they aren't needed for a dress-based alternative.
