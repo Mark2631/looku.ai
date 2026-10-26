@@ -3,6 +3,7 @@ import { z } from "zod";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getResearchPrompt } from "@/lib/style-research";
+import { filterCompleteOutfits } from "@/lib/wardrobe-rules";
 
 export const runtime = "nodejs";
 const requestSchema = z.object({
@@ -81,20 +82,7 @@ export async function POST(request: NextRequest) {
     const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", prompt, temperature: 0.35, maxOutputTokens: 1500 });
     const parsed = resultSchema.safeParse(parseJson(result.text));
     if (!parsed.success) return NextResponse.json({ error: "The stylist returned a result we couldn't validate. Try a more specific occasion." }, { status: 502 });
-    const validIds = new Set(items.map(item => item.id));
-    const categoriesById = new Map(items.map(item => [item.id, item.category]));
-    const availableShoesExist = items.some(item => item.category === "Shoes");
-    const outfits = parsed.data.outfits.map(outfit => ({ ...outfit, itemIds: Array.from(new Set(outfit.itemIds)).filter(id => validIds.has(id)) }))
-      .filter(outfit => {
-        if (outfit.itemIds.length < 2) return false;
-        const outfitCategories = outfit.itemIds.map(id => categoriesById.get(id));
-        const hasDress = outfitCategories.includes("Dresses");
-        const hasTop = outfitCategories.includes("Tops");
-        const hasBottom = outfitCategories.includes("Bottoms");
-        const hasShoes = outfitCategories.includes("Shoes");
-        const hasCompleteCore = hasDress || (hasTop && hasBottom);
-        return hasCompleteCore && (!availableShoesExist || hasShoes);
-      });
+    const outfits = filterCompleteOutfits(parsed.data.outfits, items);
     if (!outfits.length) return NextResponse.json({ error: "I couldn't form a complete outfit with the clothes marked available. Add a top and bottom, or a dress and suitable shoes, and try again." }, { status: 422 });
     return NextResponse.json({ outfits }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
