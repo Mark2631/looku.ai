@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model_name: "tryon-max",
         inputs: {
-          model_image: personSigned.signedUrl,
+          model_image: "data:" + photo.type + ";base64," + Buffer.from(await photo.arrayBuffer()).toString("base64"),
           product_image: garmentSigned.signedUrl,
           prompt: parsed.data.prompt || "",
           generation_mode: "fast",
