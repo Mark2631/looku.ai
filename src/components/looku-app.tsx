@@ -25,7 +25,7 @@ type Outfit = {
   status: "suggested" | "saved" | "planned" | "worn"; source: "ai" | "manual"; cover_image_path: string | null;
   cover_url?: string | null; worn_at: string | null; created_at: string; item_ids: string[];
 };
-type OutfitPlan = { id: string; user_id: string; plan_date: string; event_title: string; occasion: string; notes: string | null; outfit_id: string | null; created_at: string };
+type OutfitPlan = { id: string; user_id: string; plan_date: string; event_title: string; occasion: string; notes: string | null; outfit_id: string | null; external_event_id: string | null; created_at: string };
 type Product = { id: string; title: string; description: string | null; category: string; brand: string | null; merchant: string; currency: string; price: number | null; image_url: string | null; product_url: string; affiliate_url: string | null; country_code: string[]; sizes: string[]; is_active?: boolean; is_approved?: boolean };
 type Wish = { id: string; user_id: string; title: string; product_url: string | null; note: string | null; created_at: string };
 type Profile = { full_name: string | null; style_preferences: Record<string, unknown>; onboarding_completed: boolean };
@@ -121,6 +121,7 @@ export function LookuApp() {
   const [calendarMessage, setCalendarMessage] = useState("");
   const [weather, setWeather] = useState<WeatherPayload | null>(null);
   const [weatherMessage, setWeatherMessage] = useState("");
+  const weatherCity = typeof profile.style_preferences?.locationCity === "string" ? String(profile.style_preferences.locationCity).trim() : "";
 
   const showToast = useCallback((message: string) => { setToastMessage(message); window.setTimeout(() => setToastMessage(""), 3000); }, []);
 
@@ -260,7 +261,7 @@ export function LookuApp() {
   const todayPlans = useMemo(() => plans.filter(p => p.plan_date === todayIso()), [plans]);
   const styleName = String(profile.style_preferences?.style || "Relaxed minimal");
   const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
-  const weatherCity = typeof profile.style_preferences?.locationCity === "string" ? String(profile.style_preferences.locationCity).trim() : "";
+
 
   function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
 
