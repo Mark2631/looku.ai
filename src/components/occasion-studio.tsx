@@ -45,7 +45,7 @@ export function OccasionStudio({
   onGenerate: (prompt: string, occasion: string) => void;
   onPlan: (date: string, title: string, occasion: string) => void;
   onRenderLook: (idea: OutfitIdea, index: number) => ReactNode;
-  onSaveWishlist: (title: string, url: string, note: string) => Promise<void>;
+  onSaveWishlist: (title: string, url: string, note: string) => Promise<boolean>;
 }) {
   const [eventName, setEventName] = useState("Birthday");
   const [eventDate, setEventDate] = useState("");
@@ -110,10 +110,8 @@ export function OccasionStudio({
     if (url.protocol !== "https:") return;
     setSavingWishlist(true);
     try {
-      await onSaveWishlist(externalProductTitle.trim(), url.toString(), externalProductNote.trim() || "Consider for " + eventName + ". Budget: KES " + (budget || "not set") + ".");
-      setExternalProductTitle("");
-      setExternalProductUrl("");
-      setExternalProductNote("");
+      const saved = await onSaveWishlist(externalProductTitle.trim(), url.toString(), externalProductNote.trim() || "Consider for " + eventName + ". Budget: KES " + (budget || "not set") + ".");
+      if (saved) { setExternalProductTitle(""); setExternalProductUrl(""); setExternalProductNote(""); }
     } finally { setSavingWishlist(false); }
   }
 
