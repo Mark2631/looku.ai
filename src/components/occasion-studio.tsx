@@ -25,6 +25,14 @@ const EVENTS = [
   { name: "Job interview", dressCode: "Polished", note: "The employer and role set the formality. Clean, comfortable and well-fitting beats buying a new outfit by default." },
   { name: "Dinner", dressCode: "Venue-led", note: "Use the venue and company as the dress-code signal. Rewearing a reliable base is a valid choice." },
   { name: "Family celebration", dressCode: "Personal and occasion-aware", note: "Balance comfort, family or cultural expectations and your own taste." },
+  { name: "Church or faith ceremony", dressCode: "Modest and polished", note: "Follow the specific venue guidance and your own comfort or modesty preferences; traditions differ." },
+  { name: "Workday", dressCode: "Smart casual", note: "Build around the actual workplace dress expectations and a comfortable commute." },
+  { name: "Travel day", dressCode: "Comfort-first", note: "Prioritize layers, movement and versatile pieces you can rewear while travelling." },
+  { name: "Outdoor event", dressCode: "Casual", note: "Consider terrain, movement and verified weather; do not guess a forecast." },
+  { name: "Gym or active", dressCode: "Activewear", note: "Use pieces suitable for the activity and free movement; appearance should not override function." },
+  { name: "Formal event", dressCode: "Formal", note: "Follow the invitation. Do not assume black tie or a particular outfit without explicit guidance." },
+  { name: "Online interview", dressCode: "Polished", note: "Make the on-camera portion deliberate while keeping the full outfit comfortable." },
+  { name: "Campus date", dressCode: "Smart casual", note: "Use the user's own comfort and personal style, not assumptions about gender or relationship expectations." },
 ];
 
 const CATEGORY_NEEDS: Record<string, string[]> = {
@@ -36,6 +44,14 @@ const CATEGORY_NEEDS: Record<string, string[]> = {
   "Job interview": ["Tops", "Bottoms", "Shoes", "Outerwear"],
   "Dinner": ["Tops", "Bottoms", "Dresses", "Shoes"],
   "Family celebration": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
+  "Church or faith ceremony": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Workday": ["Tops", "Bottoms", "Shoes", "Outerwear"],
+  "Travel day": ["Tops", "Bottoms", "Shoes", "Outerwear"],
+  "Outdoor event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Gym or active": ["Activewear", "Shoes"],
+  "Formal event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Online interview": ["Tops", "Bottoms", "Dresses", "Outerwear"],
+  "Campus date": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
 };
 
 export function OccasionStudio({
@@ -89,18 +105,17 @@ export function OccasionStudio({
     if (category === "Shoes") return !ownedCategories.has(category);
     return !ownedCategories.has(category);
   });
-  const budgetNumber = Number(budget);
+  const budgetIsSet = budget.trim() !== "" && Number.isFinite(Number(budget));
+  const budgetNumber = budgetIsSet ? Number(budget) : null;
+  const withinBudget = (product: StoreProduct) => !budgetIsSet || (product.price !== null && budgetNumber !== null && product.price <= budgetNumber);
   const matchingProducts = products
-    .filter(product => product.currency === "KES" && (product.price == null || !Number.isFinite(budgetNumber) || budgetNumber <= 0 || product.price <= budgetNumber))
+    .filter(product => product.currency === "KES" && withinBudget(product))
     .filter(product => {
       const category = product.category.toLowerCase();
       return missingCategories.some(need => category.includes(need.toLowerCase()) || need.toLowerCase().includes(category));
     })
     .slice(0, 8);
-  const productFallback = products
-    .filter(product => product.currency === "KES" && (product.price == null || !Number.isFinite(budgetNumber) || budgetNumber <= 0 || product.price <= budgetNumber))
-    .slice(0, 8);
-  const shoppingOptions = matchingProducts.length ? matchingProducts : productFallback;
+  const shoppingOptions = matchingProducts;
 
   async function saveExternalProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
