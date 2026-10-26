@@ -341,6 +341,52 @@ export function LookuApp() {
     await loadData(user.id); showToast("Garment removed.");
   }
 
+
+  async function refreshCalendarEvents() {
+    setCalendarLoading(true); setCalendarMessage("");
+    try {
+      const data = await fetchCalendarSnapshot();
+      setCalendarStatus(data); setCalendarEvents(data.events || []);
+      if (data.message) setCalendarMessage(data.message);
+      else setCalendarMessage("");
+    } catch (error) {
+      setCalendarMessage(error instanceof Error ? error.message : "Calendar events could not be loaded.");
+    } finally { setCalendarLoading(false); }
+  }
+
+  async function disconnectCalendar() {
+    if (!window.confirm("Disconnect Google Calendar from LOOKU? Existing outfits and plans will remain.")) return;
+    try {
+      const response = await fetch("/api/calendar/disconnect", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not disconnect Google Calendar.");
+      setCalendarStatus({ configured: true, connected: false, events: [] }); setCalendarEvents([]);
+      showToast("Google Calendar disconnected.");
+    } catch (error) { showToast(error instanceof Error ? error.message : "Could not disconnect Google Calendar."); }
+  }
+
+  async function importCalendarEvent(event: CalendarEvent) {
+    if (!user) return;
+    if (plans.some(plan => plan.external_event_id === event.id)) { showToast("This calendar event is already in your LOOKU planner."); return; }
+    const date = event.start.slice(0, 10);
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) { showToast("This event has no usable start date."); return; }
+    const title = event.title.slice(0, 140);
+    const titleLower = title.toLowerCase();
+    const planOccasion = /wedding|marriage|ceremony|graduation|party|celebration/.test(titleLower) ? "Wedding / Celebration"
+      : /interview|presentation|meeting|office|client|conference/.test(titleLower) ? "Work / Presentation"
+      : /gym|workout|run|training/.test(titleLower) ? "Gym / Active"
+      : /date|dinner|restaurant|anniversary/.test(titleLower) ? "Event / Date"
+      : /flight|travel|trip|airport/.test(titleLower) ? "Travel" : "Everyday";
+    const notes = [event.location, event.description].filter(Boolean).join("\\n").slice(0, 1200) || null;
+    const { data, error } = await createClient().from("outfit_plans").insert({
+      user_id: user.id, plan_date: date, event_title: title, occasion: planOccasion,
+      notes, external_event_id: event.id,
+    }).select("*").single();
+    if (error || !data) { showToast(error?.message || "Could not import the event."); return; }
+    setPlans(prev => [...prev, data as OutfitPlan].sort((a,b)=>a.plan_date.localeCompare(b.plan_date)));
+    showToast("Added to your LOOKU planner. Choose an outfit when you're ready.");
+  }
+
   async function submitGarment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!user) return;
     setModalBusy(true); setModalError("");
@@ -653,6 +699,12 @@ export function LookuApp() {
         </div>
         <div className="hero-visual"><img src={heroImage} alt="Editorial fashion inspiration, not an outfit generated from your wardrobe" /><div className="hero-overlay"><div><span className="eyebrow">A NOTE TO SELF</span><strong>Style isn't more clothes. It's more ways to wear what you have.</strong></div><Sparkles size={21}/></div></div>
       </div>
+      {weather && <div className="surface row section" style={{ marginTop: 16, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}><div className="avatar"><CloudSun size={19}/></div><div><strong style={{ fontSize: 13 }}>{weather.location.name}{weather.location.region ? ", "+weather.location.region : ""} · {Math.round(weather.current.tempC)}°C</strong><p className="tiny muted" style={{ margin: "4px 0 0" }}>{weather.current.condition} · Feels like {Math.round(weather.current.feelsLikeC)}°C · Wind {Math.round(weather.current.windKph)} km/h</p></div></div>
+        <span className="badge neutral">Live weather</span>
+      </div>}
+      {weatherMessage && <div className="section" style={{ marginTop: 12 }}><div className="notice">{weatherMessage} <button className="text-action" onClick={()=>switchScreen("Settings")}>Update preferences</button></div></div>}
+      {!weatherCity && <p className="tiny muted section" style={{ marginTop: 12 }}>Tip: add your city in Preferences to enable local weather context once a weather-provider key is connected.</p>}
       <section className="section">
         <div className="section-head"><div><span className="eyebrow">START WITH THE MOMENT</span><h2 className="section-title">What's on today?</h2><p className="section-note">Choose the context. The stylist will use only clothes you own and have marked available.</p></div></div>
         <div className="filter-row">{occasions.slice(0,8).map(o=><button key={o} className={"filter-pill "+(occasion===o?"active":"")} onClick={() => setOccasion(o)}>{o}</button>)}</div>
@@ -721,6 +773,19 @@ export function LookuApp() {
     const monthLabel = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
     return <>
       <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">MAKE ROOM FOR YOUR DAY</span><h1 className="page-title serif">Plan your looks.</h1><p className="page-subtitle">Schedule outfits around real events. Calendar integration can be enabled later with explicit read-only permission.</p></div><button className="button primary" onClick={()=>openModal("plan")}><Plus size={15}/>Plan an outfit</button></div>
+      <section className="surface section">
+        <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">OPTIONAL CALENDAR CONNECTION</span><h2 className="section-title">Bring your day into LOOKU.</h2><p className="section-note">Read-only Google Calendar access helps you spot upcoming occasions. LOOKU never edits or deletes your Google events.</p></div><CalendarDays size={25}/></div>
+        <div className="tool-row" style={{ marginTop: 16 }}>
+          {!calendarStatus.configured ? <button className="button primary" disabled title="Server configuration is required"><CalendarDays size={14}/>Connect Google Calendar</button>
+            : calendarStatus.connected ? <><span className="badge"><Check size={12}/>Connected{calendarStatus.accountEmail ? " · "+calendarStatus.accountEmail : ""}</span><button className="button compact" onClick={()=>void refreshCalendarEvents()} disabled={calendarLoading}>{calendarLoading?"Refreshing…":"Refresh events"}</button><button className="button compact" onClick={()=>void disconnectCalendar()}>Disconnect</button></>
+            : <a className="button primary" href="/api/calendar/connect"><CalendarDays size={14}/>Connect Google Calendar</a>}
+        </div>
+        {!calendarStatus.configured && <p className="tiny muted" style={{ lineHeight: 1.7, margin: "12px 0 0" }}>Provider setup is required before connecting: Google OAuth client credentials, a private token-encryption key and the LOOKU server database credentials. No calendar permission is requested until you start the connection.</p>}
+        {calendarMessage && <div style={{ marginTop: 12 }}><ErrorNotice>{calendarMessage}</ErrorNotice></div>}
+        {calendarLoading && <p className="small muted" style={{ marginTop: 14 }}><LoaderCircle size={14} className="spin-icon" style={{ display:"inline",verticalAlign:"middle",marginRight:6 }}/>Loading upcoming events…</p>}
+        {calendarStatus.connected && calendarEvents.length===0 && !calendarLoading && <p className="small muted" style={{ marginTop: 14 }}>No upcoming events were returned for the next 45 days.</p>}
+        {calendarEvents.length>0 && <div className="stack" style={{ marginTop: 15 }}>{calendarEvents.map(event=><div className="outfit-row" key={event.id}><div className="avatar"><CalendarDays size={15}/></div><div style={{ minWidth:0, flex:1 }}><strong>{event.title}</strong><small>{formatDate(event.start.slice(0,10))}{event.start.includes("T")?" · "+new Date(event.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):" · All day"}{event.location?" · "+event.location:""}</small></div><button className="button compact" onClick={()=>void importCalendarEvent(event)} disabled={plans.some(p=>p.external_event_id===event.id)}>{plans.some(p=>p.external_event_id===event.id)?"Added":"Add to LOOKU"}</button></div>)}</div>}
+      </section>
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
       <section className="surface section"><div className="calendar-header"><div><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><span className="badge neutral">Local dates</span></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
         {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
