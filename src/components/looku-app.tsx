@@ -57,6 +57,7 @@ function formatDate(value: string, options: Intl.DateTimeFormatOptions = { weekd
 function getInitials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || "").join("") || "L";
 }
+function safeHostname(raw: string | null | undefined) { try { return raw ? new URL(raw).hostname : ""; } catch { return ""; } }
 function safeExternalUrl(raw: string | null | undefined) {
   if (!raw) return null;
   try { const url = new URL(raw); return url.protocol === "https:" ? url.toString() : null; } catch { return null; }
@@ -95,6 +96,7 @@ export function LookuApp() {
   const [modalBusy, setModalBusy] = useState(false);
   const [modalError, setModalError] = useState("");
   const [modalOutfitId, setModalOutfitId] = useState<string | null>(null);
+  const [modalDate, setModalDate] = useState(todayIso());
   const [toastMessage, setToastMessage] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [admin, setAdmin] = useState(false);
@@ -440,6 +442,19 @@ export function LookuApp() {
     catch { showToast("Couldn't sign out. Check your connection and retry."); }
   }
 
+  async function deleteAccount() {
+    if (!user?.email) return;
+    const confirmationEmail = window.prompt("This permanently deletes your LOOKU account, wardrobe metadata and private photos. Type your account email to confirm: " + user.email);
+    if (!confirmationEmail) return;
+    try {
+      const response = await fetch("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmationEmail }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Account deletion failed.");
+      try { await createClient().auth.signOut(); } catch { /* Account already deleted server-side. */ }
+      window.location.replace("/auth");
+    } catch (error) { showToast(error instanceof Error ? error.message : "Account deletion failed."); }
+  }
+
   function exportData() {
     const payload = { exportedAt: new Date().toISOString(), profile, wardrobe: items.map(({ image_url, ...x }) => x), savedOutfits: outfits, plans, wishlist, note: "Export contains wardrobe metadata and storage paths, not the private image binary files." };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -453,7 +468,7 @@ export function LookuApp() {
     await generateLooks(text, occasion, true);
   }
 
-  function openModal(next: Modal, outfitId: string | null = null) { setModalError(""); setModalOutfitId(outfitId); setModal(next); }
+  function openModal(next: Modal, outfitId: string | null = null, planDate = todayIso()) { setModalError(""); setModalOutfitId(outfitId); setModalDate(planDate); setModal(next); }
   function outfitItems(outfit: Outfit | OutfitIdea) {
     const ids = "item_ids" in outfit ? outfit.item_ids : outfit.itemIds;
     return ids.map(id => items.find(item => item.id === id)).filter((item): item is WardrobeItem => Boolean(item));
@@ -503,7 +518,7 @@ export function LookuApp() {
     } else if (modal === "plan") {
       title = "Plan an outfit";
       content = <form onSubmit={submitPlan}>
-        <label className="field">Date<input className="input" name="date" type="date" required defaultValue={todayIso()}/></label>
+        <label className="field">Date<input className="input" name="date" type="date" required defaultValue={modalDate}/></label>
         <label className="field">Event name<input className="input" name="title" required maxLength={140} defaultValue="Outfit plan" placeholder="Client meeting, dinner, travel…"/></label>
         <label className="field">Occasion<select className="input" name="occasion" defaultValue={occasion}>{occasions.map(o=><option key={o}>{o}</option>)}</select></label>
         <label className="field">Attach a saved look (optional)<select className="input" name="outfit_id" defaultValue={modalOutfitId || ""}><option value="">Choose later</option>{savedLooks.map(o=><option key={o.id} value={o.id}>{o.title} · {o.occasion}</option>)}</select></label>
@@ -646,7 +661,7 @@ export function LookuApp() {
       <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">MAKE ROOM FOR YOUR DAY</span><h1 className="page-title serif">Plan your looks.</h1><p className="page-subtitle">Schedule outfits around real events. Calendar integration can be enabled later with explicit read-only permission.</p></div><button className="button primary" onClick={()=>openModal("plan")}><Plus size={15}/>Plan an outfit</button></div>
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
       <section className="surface section"><div className="calendar-header"><div><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><span className="badge neutral">Local dates</span></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
-        {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan");setModalOutfitId(null);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
+        {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
       </div><p className="tiny muted" style={{ margin:"15px 0 0" }}>Choose a date to create a plan. The date is set in the form so you can add an event name, occasion and saved outfit.</p></section>
       <section className="section"><div className="section-head"><div><span className="eyebrow">UP NEXT</span><h2 className="section-title">Your upcoming plans</h2></div></div>
         {plans.filter(p=>p.plan_date>=todayIso()).length ? <div className="stack">{plans.filter(p=>p.plan_date>=todayIso()).sort((a,b)=>a.plan_date.localeCompare(b.plan_date)).map(plan=><div className="surface row" key={plan.id}><div style={{ display:"flex",gap:13,alignItems:"center",minWidth:0 }}><div className="avatar"><CalendarDays size={16}/></div><div style={{ minWidth:0 }}><strong style={{fontSize:13}}>{plan.event_title}</strong><p className="tiny muted" style={{margin:"5px 0 0"}}>{formatDate(plan.plan_date)} · {plan.occasion}{plan.notes?" · "+plan.notes:""}</p></div></div><button className="icon-button" onClick={async()=>{if(!user||!confirm("Delete this plan?"))return;const {error}=await createClient().from("outfit_plans").delete().eq("id",plan.id).eq("user_id",user.id);if(error)showToast("Couldn't remove plan.");else{setPlans(p=>p.filter(x=>x.id!==plan.id));showToast("Plan removed.");}}} aria-label="Delete plan"><Trash2 size={15}/></button></div>)}</div> : <EmptyState icon={CalendarDays} title="Your calendar has room." body="Add an event and attach a saved look, or create the plan now and choose an outfit later." action="Add your first plan" onAction={()=>openModal("plan")}/>}
@@ -660,7 +675,7 @@ export function LookuApp() {
       <div className="filter-row section"><button className="filter-pill active">All looks · {savedLooks.length}</button><span className="badge neutral"><LockKeyhole size={12}/>Private by default</span></div>
       {savedLooks.length ? <div className="look-grid">{savedLooks.map(outfit=>{const pieces=outfitItems(outfit);return <article className="look-card" key={outfit.id}><img src={outfit.cover_url||pieces.find(i=>i.image_url)?.image_url||heroImage} alt={outfit.title} loading="lazy"/><div className="look-info"><div className="row"><span className="badge neutral">{outfit.status==="worn"?"WORN":outfit.status==="planned"?"PLANNED":"SAVED"}</span><button className="icon-button" style={{width:30,height:30}} onClick={()=>void deleteOutfit(outfit)} aria-label="Delete look"><Trash2 size={13}/></button></div><strong style={{display:"block",marginTop:11}}>{outfit.title}</strong><p>{outfit.occasion} · {formatDate(outfit.worn_at||outfit.created_at)}</p>{pieces.length>0&&<p>{pieces.map(x=>x.name).join(" · ")}</p>}<div className="tool-row" style={{marginTop:12}}>{outfit.status!=="worn"&&<button className="button compact" onClick={()=>void markWorn(outfit)}><Check size={13}/>Wore this</button>}<button className="button compact" onClick={()=>void reactToOutfit(outfit,"like")} aria-label="Like look"><ThumbsUp size={13}/></button></div></div></article>})}</div> : <EmptyState icon={ImagePlus} title="Keep the looks you love." body="Save an AI-generated outfit or upload a real outfit photo. Over time this becomes a useful record of combinations you can repeat." action="Record a look" onAction={()=>openModal("look")}/>}
       <section className="section"><div className="section-head"><div><span className="eyebrow">THE IDEAS YOU'RE CONSIDERING</span><h2 className="section-title">Wishlist</h2><p className="section-note">Saved product links aren't owned clothing and won't be used in outfit generation.</p></div><button className="button compact" onClick={()=>openModal("wish")}><Plus size={13}/>Add idea</button></div>
-      {wishlist.length ? <div className="stack">{wishlist.map(w=><div className="surface row" key={w.id}><div style={{minWidth:0}}><strong style={{fontSize:13}}>{w.title}</strong><p className="small muted" style={{margin:"5px 0 0"}}>{w.note||"Personal shopping idea"}{w.product_url&&" · "+new URL(w.product_url).hostname}</p>{w.product_url&&safeExternalUrl(w.product_url)&&<a className="text-action" href={safeExternalUrl(w.product_url)||undefined} target="_blank" rel="noreferrer">Open retailer <ExternalLink size={11} style={{display:"inline"}}/></a>}</div><button className="icon-button" onClick={()=>void deleteWish(w)} aria-label="Remove wishlist idea"><Trash2 size={14}/></button></div>)}</div> : <div className="surface row"><div><strong style={{fontSize:12}}>Keep your future purchases intentional.</strong><p className="small muted" style={{margin:"5px 0 0"}}>Save a product URL and why it belongs in your wardrobe.</p></div><button className="button compact" onClick={()=>openModal("wish")}>Add wishlist idea</button></div>}
+      {wishlist.length ? <div className="stack">{wishlist.map(w=><div className="surface row" key={w.id}><div style={{minWidth:0}}><strong style={{fontSize:13}}>{w.title}</strong><p className="small muted" style={{margin:"5px 0 0"}}>{w.note||"Personal shopping idea"}{w.product_url&&safeHostname(w.product_url)?" · "+safeHostname(w.product_url):""}</p>{w.product_url&&safeExternalUrl(w.product_url)&&<a className="text-action" href={safeExternalUrl(w.product_url)||undefined} target="_blank" rel="noreferrer">Open retailer <ExternalLink size={11} style={{display:"inline"}}/></a>}</div><button className="icon-button" onClick={()=>void deleteWish(w)} aria-label="Remove wishlist idea"><Trash2 size={14}/></button></div>)}</div> : <div className="surface row"><div><strong style={{fontSize:12}}>Keep your future purchases intentional.</strong><p className="small muted" style={{margin:"5px 0 0"}}>Save a product URL and why it belongs in your wardrobe.</p></div><button className="button compact" onClick={()=>openModal("wish")}>Add wishlist idea</button></div>}
       </section>
     </>;
   }
@@ -692,9 +707,9 @@ export function LookuApp() {
           <button className="button primary" type="submit" disabled={savingProfile}>{savingProfile?"Saving…":"Save preferences"}</button>
         </form>
         <aside className="stack">
-          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><p className="small muted" style={{lineHeight:1.7}}>Account authenticated through Supabase. Wardrobe images are stored in private object storage; the browser only receives short-lived signed URLs.</p><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button></div>
+          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><p className="small muted" style={{lineHeight:1.7}}>Account authenticated through Supabase. Wardrobe images are stored in private object storage; the browser only receives short-lived signed URLs.</p><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button><button className="button danger" style={{width:"100%",marginTop:9}} onClick={()=>void deleteAccount()}><Trash2 size={14}/>Delete account and data</button></div>
           <div className="surface soft"><span className="eyebrow">YOUR AI ALLOWANCE</span><h3 style={{fontSize:23,fontWeight:500,margin:"10px 0 5px"}}>20 calls per day</h3><p className="small muted" style={{lineHeight:1.6}}>The backend applies a per-user daily limit to help control model costs. Image recognition and styling use the same allowance.</p></div>
-          <div className="surface"><span className="eyebrow">PRIVACY AND CONTROL</span><p className="small muted" style={{lineHeight:1.7}}>You can remove wardrobe items, delete saved looks and export your metadata. Account deletion needs a dedicated server-side flow so photos and account records are deleted together; it will not be simulated here.</p><a className="text-action" href="https://www.odpc.go.ke/" target="_blank" rel="noreferrer">Kenya data protection authority <ExternalLink size={11} style={{display:"inline"}}/></a></div>
+          <div className="surface"><span className="eyebrow">PRIVACY AND CONTROL</span><p className="small muted" style={{lineHeight:1.7}}>You can remove wardrobe items, delete saved looks and export your metadata. You can delete your account from this screen. The secure server-side flow confirms your email, removes private photos, and deletes account records.</p><a className="text-action" href="https://www.odpc.go.ke/" target="_blank" rel="noreferrer">Kenya data protection authority <ExternalLink size={11} style={{display:"inline"}}/></a></div>
           {admin&&<div className="surface"><span className="eyebrow">INTERNAL TOOLS</span><h3 style={{margin:"8px 0",fontWeight:500}}>Catalog administration</h3><p className="small muted">You are allow-listed for catalog management. Add records, inspect review state and only publish products with authorized sources.</p><button className="button compact" onClick={()=>switchScreen("Shop")}>Open catalog tools</button></div>}
         </aside>
       </div>
