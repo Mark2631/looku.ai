@@ -29,14 +29,13 @@ export async function POST(request: NextRequest) {
     const parsedBody = requestSchema.safeParse(await request.json());
     if (!parsedBody.success) return NextResponse.json({ error: "The image path was invalid." }, { status: 400 });
     if (!parsedBody.data.imagePath.startsWith(user.id + "/")) return NextResponse.json({ error: "You can only process images in your own wardrobe folder." }, { status: 403 });
-    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
-    if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the database migration first." }, { status: 503 });
-    if (!allowed) return NextResponse.json({ error: "Today's allowance of 20 AI operations has been used. You can still add this garment manually." }, { status: 429 });
-
     const { data: file, error: downloadError } = await supabase.storage.from("wardrobe-private").download(parsedBody.data.imagePath);
     if (downloadError || !file) return NextResponse.json({ error: "Could not access the uploaded image." }, { status: 400 });
     if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Image must be under 10 MB." }, { status: 413 });
     const image = new Uint8Array(await file.arrayBuffer());
+    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
+    if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the database migration first." }, { status: 503 });
+    if (!allowed) return NextResponse.json({ error: "Today's allowance of 20 AI operations has been used. You can still add this garment manually." }, { status: 429 });
     const mimeType = file.type === "image/png" ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
     const prompt = "Identify the single main clothing item in this photo for a private digital wardrobe. If there are multiple pieces, identify the clearest primary garment. Do not claim exact fabric or brand without visual evidence. Use conservative attributes. Formality is 1 (sleepwear/gym) to 10 (formal occasion). Return JSON only with keys name,category,colors,pattern,formality,seasons,style_tags,description. Allowed categories: Tops,Bottoms,Shoes,Outerwear,Dresses,Accessories,Activewear,Sleepwear,Bags,Other. Allowed seasons: hot,mild,cold,rainy,all-season. Suggested user name: " + (parsedBody.data.suggestedName || "none") + ".";
     const result = await generateText({ model: process.env.LOOKU_AI_MODEL || "google/gemini-3.1-flash-lite", messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image", image, mediaType: mimeType }] }], temperature: 0.15, maxOutputTokens: 650 });
