@@ -12,22 +12,22 @@ export type BudgetProduct = {
 };
 
 export const OCCASION_CATEGORY_NEEDS: Record<string, string[]> = {
-  Birthday: ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  Graduation: ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Birthday": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
+  "Graduation": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
   "Date night": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
   "Wedding guest": ["Dresses", "Tops", "Bottoms", "Shoes", "Accessories"],
   "Campus event": ["Tops", "Bottoms", "Shoes", "Outerwear"],
   "Job interview": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  Dinner: ["Tops", "Bottoms", "Dresses", "Shoes"],
+  "Dinner": ["Tops", "Bottoms", "Dresses", "Shoes"],
   "Family celebration": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  "Church or faith ceremony": ["Dresses", "Tops", "Bottoms", "Shoes"],
-  Workday: ["Tops", "Bottoms", "Shoes", "Outerwear"],
+  "Church or faith ceremony": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Workday": ["Tops", "Bottoms", "Shoes", "Outerwear"],
   "Travel day": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Outdoor event": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Campus date": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  "Gym or active": ["Tops", "Bottoms", "Shoes", "Activewear"],
+  "Outdoor event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
+  "Gym or active": ["Activewear", "Shoes"],
+  "Formal event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
   "Online interview": ["Tops", "Bottoms", "Dresses", "Outerwear"],
-  "Formal event": ["Dresses", "Tops", "Bottoms", "Shoes", "Accessories"],
+  "Campus date": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
 };
 
 export function findOccasionGaps(items: OccasionWardrobeItem[], occasion: string): string[] {
@@ -50,8 +50,7 @@ export function findOccasionGaps(items: OccasionWardrobeItem[], occasion: string
 
   const needs = OCCASION_CATEGORY_NEEDS[occasion] || OCCASION_CATEGORY_NEEDS.Birthday;
   if (needs.includes("Shoes") && !ownedCategories.has("Shoes")) gaps.push("Shoes");
-  if (["Travel day", "Outdoor event", "Graduation", "Workday", "Job interview"].includes(occasion)
-    && needs.includes("Outerwear") && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
+  if (["Travel day", "Outdoor event"].includes(occasion) && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
   if (needs.includes("Activewear") && !ownedCategories.has("Activewear")) gaps.push("Activewear");
 
   // An owned dress is a valid core outfit by itself. Do not tell the user to buy a top/bottom
