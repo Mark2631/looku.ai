@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (!parsedBody.data.imagePath.startsWith(user.id + "/")) return NextResponse.json({ error: "You can only process images in your own wardrobe folder." }, { status: 403 });
     const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the database migration first." }, { status: 503 });
-    if (!allowed) return NextResponse.json({ error: "Today's allowance of 10 AI operations has been used. You can still add this garment manually." }, { status: 429 });
+    if (!allowed) return NextResponse.json({ error: "Today's allowance of 20 AI operations has been used. You can still add this garment manually." }, { status: 429 });
 
     const { data: file, error: downloadError } = await supabase.storage.from("wardrobe-private").download(parsedBody.data.imagePath);
     if (downloadError || !file) return NextResponse.json({ error: "Could not access the uploaded image." }, { status: 400 });
