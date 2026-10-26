@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const parsedBody = requestSchema.safeParse(await request.json());
     if (!parsedBody.success) return NextResponse.json({ error: "The image path was invalid." }, { status: 400 });
     if (!parsedBody.data.imagePath.startsWith(user.id + "/")) return NextResponse.json({ error: "You can only process images in your own wardrobe folder." }, { status: 403 });
-    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota", { p_daily_limit: 20 });
+    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the database migration first." }, { status: 503 });
     if (!allowed) return NextResponse.json({ error: "Today's AI allowance has been used. You can still add this garment manually." }, { status: 429 });
 
