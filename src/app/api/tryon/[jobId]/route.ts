@@ -70,7 +70,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ job
     } else {
       let remote: URL;
       try { remote = new URL(output); } catch { throw new Error("Provider output URL was invalid."); }
-      if (remote.protocol !== "https:" || remote.hostname !== "cdn.fashn.ai") throw new Error("Provider output origin was not trusted.");
+      if (remote.protocol !== "https:" || !["cdn.fashn.ai", "media.fashn.ai"].includes(remote.hostname)) throw new Error("Provider output origin was not trusted.");
       const imageResponse = await fetch(remote, { cache: "no-store", signal: AbortSignal.timeout(12000) });
       if (!imageResponse.ok) throw new Error("Provider output could not be downloaded.");
       contentType = imageResponse.headers.get("content-type")?.split(";")[0] || "image/jpeg";
