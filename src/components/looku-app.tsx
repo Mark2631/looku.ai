@@ -120,6 +120,7 @@ export function LookuApp() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarMessage, setCalendarMessage] = useState("");
+  const [calendarCursor, setCalendarCursor] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [weather, setWeather] = useState<WeatherPayload | null>(null);
   const [weatherMessage, setWeatherMessage] = useState("");
   const weatherCity = typeof profile.style_preferences?.locationCity === "string" ? String(profile.style_preferences.locationCity).trim() : "";
@@ -793,6 +794,7 @@ export function LookuApp() {
       </div>}
       {weatherMessage && <div className="section" style={{ marginTop: 12 }}><div className="notice">{weatherMessage} <button className="text-action" onClick={()=>switchScreen("Settings")}>Update preferences</button></div></div>}
       {!weatherCity && <p className="tiny muted section" style={{ marginTop: 12 }}>Tip: add your city in Preferences to enable local weather context once a weather-provider key is connected.</p>}
+      {!profile.onboarding_completed && <div className="surface soft section" style={{marginTop:18}}><span className="badge"><Sparkles size={12}/>YOUR FIRST EDIT</span><h2 className="section-title" style={{marginTop:12}}>A little about your style goes a long way.</h2><p className="section-note">Add a few preferences and some pieces you already own. LOOKU can then start building combinations around your actual clothes.</p><div className="tool-row" style={{marginTop:15}}><button className="button primary compact" onClick={()=>switchScreen("Settings")}>Set my preferences <ArrowRight size={13}/></button><button className="button compact" onClick={()=>openModal("garment")}><Plus size={13}/>Add clothes</button></div></div>}
       <section className="section">
         <div className="section-head"><div><span className="eyebrow">START WITH THE MOMENT</span><h2 className="section-title">What's on today?</h2><p className="section-note">Choose the context. The stylist will use only clothes you own and have marked available.</p></div></div>
         <div className="filter-row">{occasions.slice(0,8).map(o=><button key={o} className={"filter-pill "+(occasion===o?"active":"")} onClick={() => setOccasion(o)}>{o}</button>)}</div>
@@ -855,7 +857,7 @@ export function LookuApp() {
   }
 
   function renderPlanner() {
-    const start = new Date(); start.setDate(1);
+    const start = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1);
     const first = new Date(start.getFullYear(), start.getMonth(), 1).getDay();
     const daysInMonth = new Date(start.getFullYear(), start.getMonth()+1, 0).getDate();
     const monthLabel = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
@@ -875,7 +877,7 @@ export function LookuApp() {
         {calendarEvents.length>0 && <div className="stack" style={{ marginTop: 15 }}>{calendarEvents.map(event=><div className="outfit-row" key={event.id}><div className="avatar"><CalendarDays size={15}/></div><div style={{ minWidth:0, flex:1 }}><strong>{event.title}</strong><small>{formatDate(event.start.slice(0,10))}{event.start.includes("T")?" · "+new Date(event.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):" · All day"}{event.location?" · "+event.location:""}</small></div><button className="button compact" onClick={()=>void importCalendarEvent(event)} disabled={plans.some(p=>p.external_event_id===event.id)}>{plans.some(p=>p.external_event_id===event.id)?"Added":"Add to LOOKU"}</button></div>)}</div>}
       </section>
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
-      <section className="surface section"><div className="calendar-header"><div><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><span className="badge neutral">Local dates</span></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
+      <section className="surface section"><div className="calendar-header"><button className="icon-button" aria-label="Previous month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()-1,1))}><ChevronLeft size={16}/></button><div style={{flex:1,textAlign:"center"}}><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><button className="icon-button" aria-label="Next month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()+1,1))}><ChevronRight size={16}/></button></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
         {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
       </div><p className="tiny muted" style={{ margin:"15px 0 0" }}>Choose a date to create a plan. The date is set in the form so you can add an event name, occasion and saved outfit.</p></section>
       <section className="section"><div className="section-head"><div><span className="eyebrow">UP NEXT</span><h2 className="section-title">Your upcoming plans</h2></div></div>
