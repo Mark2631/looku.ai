@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { decryptCalendarToken } from "@/lib/calendar-crypto";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,13 @@ export async function POST(request: NextRequest) {
 
   const admin = createSupabaseClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   try {
+    const { data: calendarConnection } = await admin.from("calendar_connections").select("refresh_token_encrypted").eq("user_id", user.id).maybeSingle();
+    if (calendarConnection?.refresh_token_encrypted && process.env.CALENDAR_TOKEN_ENCRYPTION_KEY) {
+      try {
+        const refreshToken = decryptCalendarToken(calendarConnection.refresh_token_encrypted);
+        await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(refreshToken), { method: "POST", signal: AbortSignal.timeout(4000) }).catch(() => undefined);
+      } catch { /* Continue deleting local data; Google access can be revoked in Google Account security if provider revocation fails. */ }
+    }
     const paths = await listAllObjectPaths(admin, user.id);
     for (let i = 0; i < paths.length; i += 100) {
       const { error } = await admin.storage.from("wardrobe-private").remove(paths.slice(i, i + 100));
