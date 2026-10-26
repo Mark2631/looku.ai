@@ -7,6 +7,8 @@ LOOKU is a mobile-first personal fashion platform: a private digital wardrobe, a
 - Next.js App Router and TypeScript, deployed on Vercel.
 - Supabase Auth (cookie-based SSR sessions), PostgreSQL, Row Level Security and private Storage.
 - Vercel AI Gateway / AI SDK for image classification and wardrobe-aware outfit generation.
+- Optional, read-only Google Calendar OAuth with encrypted server-side tokens.
+- Optional WeatherAPI current conditions based on a city the user chooses.
 - Responsive PWA shell with private user data excluded from offline caching.
 - Catalog admin API restricted by a server-only email allowlist.
 
