@@ -36,13 +36,14 @@ export async function POST(request: NextRequest) {
     const body = requestSchema.safeParse(await request.json());
     if (!body.success) return NextResponse.json({ error: "Check the occasion and styling request." }, { status: 400 });
 
+    const { data: items, error: itemsError } = await supabase.from("wardrobe_items").select("id,name,brand,category,colors,pattern,formality,seasons,style_tags,status,attributes").eq("user_id", user.id).eq("is_owned", true).eq("status", "available").limit(120);
+    if (itemsError) return NextResponse.json({ error: "Couldn't read your wardrobe. Please try again." }, { status: 500 });
+    if (!items || items.length < 2) return NextResponse.json({ error: "Add at least two available wardrobe items before generating an outfit." }, { status: 422 });
+
     const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the LOOKU database migration before using the stylist." }, { status: 503 });
     if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit of 20 operations. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
 
-    const { data: items, error: itemsError } = await supabase.from("wardrobe_items").select("id,name,brand,category,colors,pattern,formality,seasons,style_tags,status,attributes").eq("user_id", user.id).eq("is_owned", true).eq("status", "available").limit(120);
-    if (itemsError) return NextResponse.json({ error: "Couldn't read your wardrobe. Please try again." }, { status: 500 });
-    if (!items || items.length < 2) return NextResponse.json({ error: "Add at least two available wardrobe items before generating an outfit." }, { status: 422 });
 
     const [profileResult, feedbackResult, wornResult] = await Promise.all([
       supabase.from("profiles").select("style_preferences").eq("id", user.id).maybeSingle(),
