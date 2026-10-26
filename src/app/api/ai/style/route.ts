@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const body = requestSchema.safeParse(await request.json());
     if (!body.success) return NextResponse.json({ error: "Check the occasion and styling request." }, { status: 400 });
 
-    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota", { p_daily_limit: 20 });
+    const { data: allowed, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError) return NextResponse.json({ error: "AI usage controls are not ready. Apply the LOOKU database migration before using the stylist." }, { status: 503 });
     if (!allowed) return NextResponse.json({ error: "You've reached today's AI styling limit. Your saved wardrobe is still available; try again tomorrow." }, { status: 429 });
 
