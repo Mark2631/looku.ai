@@ -34,6 +34,12 @@ const EVENTS = [
   { name: "Formal event", dressCode: "Formal", note: "Follow the invitation. Do not assume black tie or a particular outfit without explicit guidance." },
   { name: "Online interview", dressCode: "Polished", note: "Make the on-camera portion deliberate while keeping the full outfit comfortable." },
   { name: "Campus date", dressCode: "Smart casual", note: "Use the user's own comfort and personal style, not assumptions about gender or relationship expectations." },
+  { name: "Conference / networking", dressCode: "Polished", note: "Use the actual event guidance, all-day comfort, layers and practical shoes. You do not need a full new outfit to look credible." },
+  { name: "Concert / festival", dressCode: "Expressive casual", note: "Venue rules, terrain, weather and movement matter. Prioritize comfortable shoes and a layer only when it serves a real need." },
+  { name: "Beach or pool day", dressCode: "Comfort and activity-led", note: "Start from swimwear or activity-suitable pieces you already own. Coverage and modesty are personal choices; do not assume them." },
+  { name: "Photoshoot", dressCode: "Brief and background-led", note: "Follow the shoot brief and background. Offer color and texture alternatives, but do not promise a garment will photograph perfectly without a test." },
+  { name: "Baby shower", dressCode: "Smart casual", note: "Use the host's dress code and venue. Comfort and freedom of movement matter more than trend-driven spending." },
+  { name: "First day at work", dressCode: "Workplace-led", note: "Use the employer's stated expectations and your own comfort. Rewear pieces you already own before filling a real gap." },
 ];
 
 export function OccasionStudio({
