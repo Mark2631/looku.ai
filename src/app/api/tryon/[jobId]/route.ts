@@ -49,7 +49,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ job
     const creditsUsed = creditHeader && Number.isFinite(Number(creditHeader)) ? Number(creditHeader) : null;
     if (!response.ok) return NextResponse.json({ jobId, status: job.status, message: "Waiting for provider status." }, { status: 202, headers: { "Cache-Control": "no-store" } });
     if (provider.status === "failed") {
-      await admin.from("tryon_jobs").update({ status: "failed", error_message: "The try-on provider couldn't generate a reliable image.", credits_used: creditsUsed }).eq("id", job.id).eq("user_id", user.id);
+      await admin.storage.from("wardrobe-private").remove([job.model_image_path]).catch(() => undefined);
+      await admin.from("tryon_jobs").update({ status: "failed", error_message: "The try-on provider couldn't generate a reliable image.", model_image_path: "[deleted-after-processing]", credits_used: creditsUsed }).eq("id", job.id).eq("user_id", user.id);
       return NextResponse.json({ jobId, status: "failed", error: "The try-on provider couldn't generate a reliable image. Try a clear, front-facing photo and a single garment." }, { headers: { "Cache-Control": "no-store" } });
     }
     if (provider.status !== "completed" || !provider.output?.[0]) {
@@ -83,11 +84,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ job
     const path = user.id + "/tryon-results/" + job.id + "." + ext;
     const { error: storageError } = await admin.storage.from("wardrobe-private").upload(path, imageBytes, { contentType, cacheControl: "3600", upsert: true });
     if (storageError) throw new Error("Could not store the result in private wardrobe storage.");
-    const { error: updateError } = await admin.from("tryon_jobs").update({ status: "completed", result_image_path: path, error_message: null, credits_used: creditsUsed }).eq("id", job.id).eq("user_id", user.id);
+    const { error: updateError } = await admin.from("tryon_jobs").update({ status: "completed", result_image_path: path, model_image_path: "[deleted-after-processing]", error_message: null, credits_used: creditsUsed }).eq("id", job.id).eq("user_id", user.id);
     if (updateError) {
       await admin.storage.from("wardrobe-private").remove([path]);
       throw new Error("Could not record the result safely.");
     }
+    // Keep the generated result, but remove the uploaded personal model photo after processing.
+    await admin.storage.from("wardrobe-private").remove([job.model_image_path]).catch(() => undefined);
     const resultUrl = await signedResult(admin, path);
     return NextResponse.json({ jobId, status: "completed", resultUrl, creditsUsed }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
