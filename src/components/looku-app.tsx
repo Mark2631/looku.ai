@@ -1008,7 +1008,7 @@ export function LookuApp() {
 
   const currentNav = navItems.find(n=>n.id===screen);
   const mobileItems: {id: Screen|"More"; label: string; icon: typeof House}[] = [
-    {id:"Today",label:"Today",icon:House},{id:"Closet",label:"Closet",icon:Shirt},{id:"Stylist",label:"Stylist",icon:Sparkles},{id:"Occasion",label:"Occasion",icon:CalendarCheck},{id:"Plan",label:"Plan",icon:CalendarDays},{id:"More",label:"More",icon:Menu}
+    {id:"Today",label:"Today",icon:House},{id:"Closet",label:"Closet",icon:Shirt},{id:"Stylist",label:"Stylist",icon:Sparkles},{id:"Plan",label:"Plan",icon:CalendarDays},{id:"More",label:"More",icon:Menu}
   ];
   const content = screen==="Today" ? renderToday() : screen==="Closet" ? renderCloset() : screen==="Stylist" ? renderStylist() : screen==="Occasion" ? renderOccasionStudio() : screen==="TryOn" ? renderTryOn() : screen==="Plan" ? renderPlanner() : screen==="Looks" ? renderLooks() : screen==="Shop" ? renderShop() : screen==="Insights" ? renderInsights() : renderSettings();
 
