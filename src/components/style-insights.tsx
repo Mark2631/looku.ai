@@ -8,6 +8,7 @@ type InsightOutfit = { id: string; title: string; status: "suggested" | "saved" 
 type IntegrationHealth = {
   backendConfigured?: boolean;
   aiGatewayKeyConfigured?: boolean;
+  aiGatewayMode?: "api-key" | "vercel-oidc" | "not-configured";
   adminCatalogConfigured?: boolean;
   calendarConfigured?: boolean;
   weatherConfigured?: boolean;
@@ -44,7 +45,7 @@ export function StyleInsights({ items, outfits, integrationHealth, calendarConne
   const maxCategory = Math.max(1,...categoryCounts.map(row=>row.count));
 
   const integrationStatus = (id: string) => {
-    if (id === "ai") return integrationHealth?.aiGatewayKeyConfigured ? "API key configured" : "Needs model credential check";
+    if (id === "ai") return integrationHealth?.aiGatewayMode === "api-key" ? "API key configured" : integrationHealth?.aiGatewayMode === "vercel-oidc" ? "Vercel OIDC available · first call verifies" : "Needs credentials";
     if (id === "calendar") return calendarConnected ? "Connected" : integrationHealth?.calendarConfigured ? "Ready to connect" : "OAuth setup required";
     if (id === "weather") return weatherConnected ? "Connected" : integrationHealth?.weatherConfigured ? (weatherCitySet ? "Configured; waiting for data" : "Add a city") : "Provider key required";
     if (id === "tryon") return integrationHealth?.tryOnConfigured ? "Provider configured" : "Optional paid integration";
@@ -55,7 +56,7 @@ export function StyleInsights({ items, outfits, integrationHealth, calendarConne
     if (id === "calendar" && calendarConnected) return "success";
     if (id === "weather" && weatherConnected) return "success";
     if (id === "retail" && productCount > 0) return "success";
-    if (id === "ai" && integrationHealth?.aiGatewayKeyConfigured) return "success";
+    if (id === "ai" && integrationHealth?.aiGatewayMode && integrationHealth.aiGatewayMode !== "not-configured") return "success";
     if (id === "tryon" && integrationHealth?.tryOnConfigured) return "success";
     return "neutral";
   };
