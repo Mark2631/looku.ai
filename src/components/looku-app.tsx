@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
+import { StyleInsights } from "@/components/style-insights";
 
 type Screen = "Today" | "Closet" | "Stylist" | "Plan" | "Looks" | "Shop" | "Settings";
 type WardrobeItem = {
