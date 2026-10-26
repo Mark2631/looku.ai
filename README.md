@@ -46,7 +46,7 @@ Import Mark2631/looku.ai into the intended Vercel team. Add the environment vari
 
 ## Research and integrations
 
-The Occasion Studio combines an event/date/venue/dress-code brief, actual available wardrobe items, budget-limited shopping-gap checks and saved planning. Its database contains 16 occasion playbooks, 20 shopping-gap guides and eight Kenyan retailer research leads. Those are reference content—not user garments, products for sale, or partnership claims.
+The Occasion Studio combines an event/date/venue/dress-code brief, actual available wardrobe items, budget-limited shopping-gap checks and saved planning. Its database currently contains 22 occasion playbooks, 30 shopping-gap guides and eight Kenyan retailer research leads. Those are reference content—not user garments, products for sale, or partnership claims.
 
 
 The Style Intelligence screen presents the source, takeaway, product application and limitations of each research item. Research is injected into the stylist prompt as guidance; it is not treated as a universal fashion law. Recommendation logic prioritizes available owned garments, occasion and personal constraints, then balances color/category and wear-history signals. Actual weather and calendar context are sent only when configured, available and user-authorized.
@@ -56,3 +56,9 @@ The virtual fitting room uses a paid FASHN API only after the user submits a pho
 ## Product boundaries
 
 The app does not invent store inventory. Until approved retailer data is onboarded, the in-app product catalog stays empty and users can browse researched external retailers. These retailer leads are not partners; product images, stock, pricing and affiliate relationships are not copied or claimed. AI should never substitute imaginary clothing for a user's actual wardrobe.
+
+## Release verification
+
+The production app is at https://looku-ai-mvp.vercel.app/. The source of truth is the main branch of this repository, but the live deployment may be on an earlier commit when Vercel free-tier build/deployment limits are reached. Check the active production deployment and commit hash before announcing that a new feature is live. `npm run build` first runs Vitest tests and then builds Next.js; the GitHub Actions quality gate independently type-checks the app and runs the same build on pushes and pull requests. Do not disable the tests to bypass a failing release.
+
+As of the latest verified database query, 22 researched occasion playbooks and 30 shopping-gap guides are seeded. Eight retailer sites are research-only leads, not merchant partnerships or a verified product feed. The approved product catalogue contains zero products; no real retailer inventory has been onboarded. OAuth, paid try-on, merchant catalog admin and external AI services require configured server-side credentials and successful end-to-end verification; a code path or a Vercel READY badge is not proof the paid integrations are operating.
