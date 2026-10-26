@@ -28,6 +28,19 @@ describe("findOccasionGaps", () => {
     expect(findOccasionGaps([garment("Dresses"), garment("Shoes")], "Formal event")).toEqual([]);
     expect(findOccasionGaps([garment("Tops"), garment("Bottoms"), garment("Shoes")], "Travel day")).toEqual(["Outerwear"]);
   });
+  
+  it("uses swimwear as the core outfit for a beach or pool event only", () => {
+    expect(findOccasionGaps([garment("Swimwear"), garment("Shoes")], "Beach or pool day")).toEqual([]);
+    expect(findOccasionGaps([garment("Swimwear"), garment("Shoes")], "Birthday")).toEqual(["Dresses", "Tops", "Bottoms"]);
+  });
+
+  it("does not count swimwear that is in the laundry", () => {
+    expect(findOccasionGaps([garment("Swimwear", "laundry"), garment("Shoes")], "Beach or pool day")).toEqual(["Swimwear"]);
+  });
+
+  it("does not treat accessories as compulsory purchases", () => {
+    expect(findOccasionGaps([garment("Dresses"), garment("Shoes")], "Birthday")).toEqual([]);
+  });
 
   it("requires an owned, available item before counting its category", () => {
     expect(findOccasionGaps([
