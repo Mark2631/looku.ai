@@ -235,7 +235,7 @@ export function LookuApp() {
   }, [ready]);
 
   useEffect(() => {
-    if (!configured || !user || screen !== "Plan") return;
+    if (!configured || !user) return;
     let active = true;
     setCalendarLoading(true);
     setCalendarMessage("");
@@ -246,7 +246,7 @@ export function LookuApp() {
     }).catch(error => { if (active) setCalendarMessage(error instanceof Error ? error.message : "Calendar events could not be loaded."); })
       .finally(() => { if (active) setCalendarLoading(false); });
     return () => { active = false; };
-  }, [configured, user?.id, screen]);
+  }, [configured, user?.id]);
 
   useEffect(() => {
     if (!configured || !user || !weatherCity) { setWeather(null); setWeatherMessage(""); return; }
