@@ -36,24 +36,7 @@ const EVENTS = [
   { name: "Campus date", dressCode: "Smart casual", note: "Use the user's own comfort and personal style, not assumptions about gender or relationship expectations." },
 ];
 
-const CATEGORY_NEEDS: Record<string, string[]> = {
-  "Birthday": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  "Graduation": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
-  "Date night": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  "Wedding guest": ["Dresses", "Tops", "Bottoms", "Shoes", "Accessories"],
-  "Campus event": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Job interview": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Dinner": ["Tops", "Bottoms", "Dresses", "Shoes"],
-  "Family celebration": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-  "Church or faith ceremony": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
-  "Workday": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Travel day": ["Tops", "Bottoms", "Shoes", "Outerwear"],
-  "Outdoor event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
-  "Gym or active": ["Activewear", "Shoes"],
-  "Formal event": ["Tops", "Bottoms", "Dresses", "Shoes", "Outerwear"],
-  "Online interview": ["Tops", "Bottoms", "Dresses", "Outerwear"],
-  "Campus date": ["Tops", "Bottoms", "Dresses", "Shoes", "Accessories"],
-};
+
 
 export function OccasionStudio({
   items, products, generated, styling, onGenerate, onPlan, onRenderLook, onSaveWishlist,
