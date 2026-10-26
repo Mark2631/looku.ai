@@ -391,44 +391,66 @@ export function LookuApp() {
     e.preventDefault(); if (!user) return;
     setModalBusy(true); setModalError("");
     const form = new FormData(e.currentTarget);
-    const name = String(form.get("name") || "").trim();
-    const category = String(form.get("category") || "Other");
-    const color = String(form.get("color") || "").trim();
+    const enteredName = String(form.get("name") || "").trim();
+    const fallbackCategory = String(form.get("category") || "Other");
+    const enteredColor = String(form.get("color") || "").trim();
     const brand = String(form.get("brand") || "").trim();
     const formality = Number(form.get("formality") || 5);
-    const file = form.get("image") as File | null;
-    if (!name) { setModalError("Give this garment a name."); setModalBusy(false); return; }
-    if (!file || !file.size) { setModalError("Choose a garment photo. LOOKU stores your images privately."); setModalBusy(false); return; }
-    if (!["image/jpeg","image/png","image/webp"].includes(file.type)) { setModalError("Use a JPG, PNG or WebP image."); setModalBusy(false); return; }
-    if (file.size > 10 * 1024 * 1024) { setModalError("Choose an image smaller than 10 MB."); setModalBusy(false); return; }
+    const files = form.getAll("image").filter((value): value is File => value instanceof File && value.size > 0);
+    if (!files.length) { setModalError("Choose at least one garment photo."); setModalBusy(false); return; }
+    if (files.length > 12) { setModalError("Add up to 12 garments per batch. You can repeat the process as your wardrobe grows."); setModalBusy(false); return; }
+    for (const file of files) {
+      if (!["image/jpeg","image/png","image/webp"].includes(file.type)) { setModalError("Use JPG, PNG or WebP images. No items were uploaded."); setModalBusy(false); return; }
+      if (file.size > 10 * 1024 * 1024) { setModalError("Each image must be smaller than 10 MB. No items were uploaded."); setModalBusy(false); return; }
+    }
+    if (files.length === 1 && !enteredName) { setModalError("Give this garment a name, or select several photos to use their file names as starting labels."); setModalBusy(false); return; }
     const supabase = createClient();
-    const path = user.id + "/" + crypto.randomUUID() + "-" + file.name.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(-90);
-    try {
-      const { error: uploadError } = await supabase.storage.from("wardrobe-private").upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
-      if (uploadError) throw uploadError;
-      let attributes: Record<string, unknown> = {};
+    let added = 0, untagged = 0;
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      setToastMessage("Adding garment " + (index + 1) + " of " + files.length + "…");
+      const fallbackName = (files.length === 1 ? enteredName : file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ")).slice(0,100) || "Wardrobe item";
+      const path = user.id + "/" + crypto.randomUUID() + "-" + file.name.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(-90);
       try {
-        const response = await fetch("/api/ai/analyze-garment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imagePath: path, suggestedName: name }) });
-        const result = await response.json();
-        if (response.ok && result.attributes) attributes = result.attributes;
-        else if (result.error) setToastMessage("Saved manually. " + result.error);
-      } catch { setToastMessage("Saved manually. Automatic tagging is unavailable right now."); }
-      const colors = Array.isArray(attributes.colors) ? attributes.colors.filter(x => typeof x === "string") : color ? [color] : [];
-      const { data, error } = await supabase.from("wardrobe_items").insert({
-        user_id: user.id, name: typeof attributes.name === "string" ? attributes.name : name,
-        category: typeof attributes.category === "string" ? attributes.category : category,
-        brand: brand || null, colors, pattern: typeof attributes.pattern === "string" ? attributes.pattern : null,
-        formality: typeof attributes.formality === "number" ? attributes.formality : formality,
-        seasons: Array.isArray(attributes.seasons) ? attributes.seasons : [],
-        style_tags: Array.isArray(attributes.style_tags) ? attributes.style_tags : [],
-        image_path: path, status: "available", is_owned: true, attributes,
-      }).select("*").single();
-      if (error || !data) { await supabase.storage.from("wardrobe-private").remove([path]); throw error || new Error("Couldn't save garment."); }
-      const { data: signed } = await supabase.storage.from("wardrobe-private").createSignedUrl(path, 3600);
-      setItems(prev => [{ ...data, image_url: signed?.signedUrl || null } as WardrobeItem, ...prev]);
-      setModal(null); setFilter("All"); setSearch(""); setScreen("Closet"); showToast("Added to your wardrobe.");
-    } catch (error) { setModalError(error instanceof Error ? error.message : "Couldn't add the garment."); }
-    finally { setModalBusy(false); }
+        const { error: uploadError } = await supabase.storage.from("wardrobe-private").upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
+        if (uploadError) throw uploadError;
+        let attributes: Record<string, unknown> = {};
+        try {
+          const response = await fetch("/api/ai/analyze-garment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imagePath: path, suggestedName: fallbackName }) });
+          const result = await response.json();
+          if (response.ok && result.attributes) attributes = result.attributes;
+          else untagged++;
+        } catch { untagged++; }
+        const allowedCategories = categories.filter(cat => cat !== "All");
+        const inferredCategory = typeof attributes.category === "string" && allowedCategories.includes(attributes.category) ? attributes.category : fallbackCategory;
+        const { data, error } = await supabase.from("wardrobe_items").insert({
+          user_id: user.id,
+          name: typeof attributes.name === "string" ? attributes.name.slice(0,100) : fallbackName,
+          category: inferredCategory,
+          brand: brand || null,
+          colors: Array.isArray(attributes.colors) ? attributes.colors.filter(x => typeof x === "string").slice(0,5) : enteredColor ? [enteredColor] : [],
+          pattern: typeof attributes.pattern === "string" ? attributes.pattern : null,
+          formality: typeof attributes.formality === "number" ? Math.min(10,Math.max(1,attributes.formality)) : formality,
+          seasons: Array.isArray(attributes.seasons) ? attributes.seasons.filter(x => typeof x === "string") : [],
+          style_tags: Array.isArray(attributes.style_tags) ? attributes.style_tags.filter(x => typeof x === "string") : [],
+          image_path: path, status: "available", is_owned: true, attributes,
+        }).select("id").single();
+        if (error || !data) {
+          await supabase.storage.from("wardrobe-private").remove([path]);
+          throw error || new Error("Could not save " + fallbackName + ".");
+        }
+        added++;
+      } catch (error) {
+        setModalError("Added " + added + " item(s), but couldn't finish " + fallbackName + ": " + (error instanceof Error ? error.message : "unknown error") + ". Retry the remaining items separately.");
+        setModalBusy(false);
+        await loadData(user.id);
+        return;
+      }
+    }
+    await loadData(user.id);
+    setModal(null); setFilter("All"); setSearch(""); setScreen("Closet");
+    showToast("Added " + added + " garment" + (added === 1 ? "" : "s") + (untagged ? ". " + untagged + " need a quick manual review because AI tagging was unavailable." : ". Your wardrobe is ready."));
+    setModalBusy(false);
   }
 
   async function submitPlan(e: FormEvent<HTMLFormElement>) {
@@ -612,8 +634,8 @@ export function LookuApp() {
       title = "Add to your wardrobe";
       content = <form onSubmit={submitGarment}>
         <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 17 }}>Upload a clear photo of one garment. Your image is stored privately. LOOKU will try to identify the garment, and you can correct the details afterwards.</p>
-        <label className="field">Garment photograph<div className="upload-box"><Camera/><strong style={{ display: "block", fontSize: 12 }}>Choose a photo</strong><small>JPG, PNG or WebP · Up to 10 MB</small><input id="garment-photo" type="file" name="image" accept="image/jpeg,image/png,image/webp" required/><label htmlFor="garment-photo" className="button compact" style={{ marginTop: 12 }}>Browse files</label></div></label>
-        <label className="field">Item name<input className="input" name="name" required maxLength={100} placeholder="e.g. Blue linen shirt"/></label>
+        <div className="field"><span>Garment photographs</span><div className="upload-box"><Camera/><strong style={{ display: "block", fontSize: 12 }}>Choose one or several photos</strong><small>JPG, PNG or WebP · Up to 10 MB each · 12 per batch</small><input id="garment-photo" type="file" name="image" accept="image/jpeg,image/png,image/webp" multiple required/><label htmlFor="garment-photo" className="button compact" style={{ marginTop: 12 }}>Browse photos</label></div></div>
+        <label className="field">Item name <small>Required for one photo; batch uploads start with each file name</small><input className="input" name="name" maxLength={100} placeholder="e.g. Blue linen shirt"/></label>
         <div className="twocol">
           <label className="field">Category<select className="input" name="category" defaultValue="Tops">{categories.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}</select></label>
           <label className="field">Main color<input className="input" name="color" placeholder="e.g. navy blue"/></label>
