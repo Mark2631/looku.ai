@@ -2,9 +2,24 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getResearchPrompt } from "@/lib/style-research";
 
 export const runtime = "nodejs";
-const requestSchema = z.object({ occasion: z.string().trim().min(1).max(80).default("Everyday"), prompt: z.string().trim().max(1000).default("Choose a good outfit for me."), count: z.number().int().min(1).max(3).default(3) });
+const requestSchema = z.object({
+  occasion: z.string().trim().min(1).max(80).default("Everyday"),
+  prompt: z.string().trim().max(1000).default("Choose a good outfit for me."),
+  count: z.number().int().min(1).max(3).default(3),
+  context: z.object({
+    weather: z.object({
+      tempC: z.number().min(-80).max(70),
+      feelsLikeC: z.number().min(-80).max(70),
+      condition: z.string().max(100),
+      windKph: z.number().min(0).max(500),
+      precipitationMm: z.number().min(0).max(2000),
+    }).optional(),
+    upcomingEvents: z.array(z.object({ title: z.string().max(120), start: z.string().max(80) })).max(5).optional(),
+  }).optional(),
+});
 const resultSchema = z.object({ outfits: z.array(z.object({ title: z.string().min(1).max(100), style: z.string().max(80).default("Personal edit"), reason: z.string().min(1).max(500), itemIds: z.array(z.string().uuid()).min(2).max(6), confidenceNote: z.string().max(180).optional() })).min(1).max(3) });
 function parseJson(text: string) {
   const from = text.indexOf("{");
@@ -48,10 +63,14 @@ export async function POST(request: NextRequest) {
       "Do not invent item IDs, brands, garments, body measurements, weather or event information. Every outfit must use at least two different supplied item IDs and at most six.",
       "A complete outfit must include a top and a bottom, or a dress with appropriate shoes. If the user owns available shoes, include footwear when practical. Never repeat a garment ID within one outfit.",
       "Use category logic, color balance, pattern balance, occasion formality, season suitability, comfort and the user request. Respect explicit accessibility, modesty, fit, climate and personal constraints. Avoid claiming physical fit or fabric properties not present in the attributes.",
+      getResearchPrompt(),
+      "Use a supplied weather context only as a current-condition signal. Never infer a forecast from current conditions. If no weather is supplied, do not mention exact temperature or precipitation.",
+      "Use supplied calendar titles only to infer likely occasion context; titles can be ambiguous, so do not reveal or repeat private event details unnecessarily.",
       "Respect the user's saved preferences and recent feedback. Prefer variety over repeating pieces worn in the last few recorded looks, unless the user explicitly asks to reuse them. Feedback represents personal preference, not a universal fashion rule.",
       "Return exactly the requested number where possible, otherwise return fewer strong options. Avoid near-duplicate alternatives. Keep reasons specific and plain-language.",
       "Return valid JSON only: {\"outfits\":[{\"title\":\"...\",\"style\":\"...\",\"reason\":\"...\",\"itemIds\":[\"uuid\",\"uuid\"],\"confidenceNote\":\"...\"}]}",
       "Requested occasion: " + body.data.occasion,
+      "Context data explicitly provided for this styling request: " + JSON.stringify(body.data.context || {}),
       "User instruction: " + body.data.prompt,
       "Saved personal style profile: " + JSON.stringify(preferences),
       "Recent user feedback (newest first): " + JSON.stringify(feedback),
