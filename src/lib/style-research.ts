@@ -33,6 +33,16 @@ export const STYLE_RESEARCH_SOURCES: ResearchSource[] = [
     limitation: "The study does not establish a universal rule for every culture, garment, trend or individual. It must not be treated as a prescription.",
   },
   {
+    id: "interactive-garment-recommendation",
+    title: "Interactive Garment Recommendation with User in the Loop",
+    publisher: "ACM Transactions on Multimedia Computing, Communications and Applications",
+    year: "2024",
+    url: "https://doi.org/10.1145/3702327",
+    takeaway: "The paper explores outfit recommendation that updates a user preference profile from their reactions as complementary items are presented.",
+    application: "LOOKU treats likes, dislikes, swaps and wear feedback as user-specific signals that can refine future suggestions instead of assuming a generic style profile.",
+    limitation: "Research results do not guarantee individual recommendation quality; LOOKU should keep feedback editable, explain recommendations and allow users to reset personalization.",
+  },
+  {
     id: "unep-textile-circularity",
     title: "Sustainability and Circularity in the Textile Value Chain: A Global Roadmap",
     publisher: "United Nations Environment Programme",
@@ -41,6 +51,16 @@ export const STYLE_RESEARCH_SOURCES: ResearchSource[] = [
     takeaway: "The roadmap describes the need for systemic changes across textile design, consumption and value chains to support more sustainable and circular textile use.",
     application: "LOOKU is wardrobe-first: reuse existing garments, log wear, reveal new combinations and identify a genuine wardrobe gap before recommending a new purchase.",
     limitation: "The report is a sector-level roadmap; it does not prove that any single app feature produces an environmental benefit. LOOKU should measure reuse rather than claim impact without data.",
+  },
+  {
+    id: "whering-wardrobe-practices",
+    title: "Digital wardrobe, outfit planning and wardrobe-use features",
+    publisher: "Whering · Official product information",
+    year: "2026",
+    url: "https://www.whering.co/",
+    takeaway: "A leading wardrobe app publicly describes cataloguing owned clothes, planning outfits, understanding wear patterns and using wishlists to reconsider purchases.",
+    application: "LOOKU should meet baseline expectations for wardrobe search, outfit planning and wear history while differentiating through occasion-first planning, explicit shopping gaps and transparent integrations.",
+    limitation: "Competitor marketing is not independent evidence of outcomes. It is used for feature benchmarking, not as proof that a feature improves sustainability or user satisfaction.",
   },
   {
     id: "unep-fashion-business",
