@@ -62,8 +62,7 @@ export function findOccasionGaps(items: OccasionWardrobeItem[], occasion: string
   if (needs.includes("Shoes") && !ownedCategories.has("Shoes")) gaps.push("Shoes");
   if (["Travel day", "Outdoor event", "Concert / festival"].includes(occasion) && !ownedCategories.has("Outerwear")) gaps.push("Outerwear");
   if (needs.includes("Activewear") && !ownedCategories.has("Activewear")) gaps.push("Activewear");
-  if (needs.includes("Accessories") && !ownedCategories.has("Accessories")) gaps.push("Accessories");
-
+  // Accessories are optional styling choices, not mandatory shopping gaps.\n
   // An owned dress is a valid core outfit by itself. Do not tell the user to buy a top/bottom
   // just because they aren't needed for a dress-based alternative.
   return Array.from(new Set(gaps));
