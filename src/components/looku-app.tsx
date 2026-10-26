@@ -961,19 +961,20 @@ export function LookuApp() {
     />;
   }
 
-  async function saveOccasionWishlist(title: string, url: string, note: string) {
-    if (!user) { showToast("Sign in to save a private wishlist."); return; }
+  async function saveOccasionWishlist(title: string, url: string, note: string): Promise<boolean> {
+    if (!user) { showToast("Sign in to save a private wishlist."); return false; }
     const safeUrl = safeExternalUrl(url);
-    if (!safeUrl) { showToast("Use a valid HTTPS product URL."); return; }
+    if (!safeUrl) { showToast("Use a valid HTTPS product URL."); return false; }
     const { error } = await createClient().from("wishlist_items").insert({
       user_id: user.id,
       title: title.slice(0, 160),
       product_url: safeUrl,
       note: note.slice(0, 500) || null,
     });
-    if (error) { showToast("Couldn't save that product link. Please try again."); return; }
+    if (error) { showToast("Couldn't save that product link. Please try again."); return false; }
     await loadData(user.id);
     showToast("Product link saved to your private wishlist.");
+    return true;
   }
 
   function renderOccasionStudio() {
