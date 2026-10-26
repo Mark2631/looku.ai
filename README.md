@@ -19,10 +19,10 @@ LOOKU is a mobile-first personal fashion platform: a private digital wardrobe, a
 1. Install Node.js 20.9+ (Node 24 is recommended) and npm.
 2. Copy .env.example to .env.local.
 3. Connect the intended LOOKU Supabase project. Confirm it is not a shared project containing another app's data before applying schema migrations. Do not use CampusTrader or Galaxy Cakes projects.
-4. Apply supabase/migrations/202610260001_initial_schema.sql in the Supabase SQL editor or using the Supabase CLI.
-5. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local. Set SUPABASE_SERVICE_ROLE_KEY only on the server for secure admin catalog management and account deletion.
+4. Apply the ordered migrations in `supabase/migrations/`: initial schema, AI quota alignment, occasion research seeds, and Kenya merchant research. The active Nexus Co. project already has these migrations applied.
+5. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`. Set `SUPABASE_SERVICE_ROLE_KEY` only on the server for secure admin catalog management, encrypted Calendar token storage, try-on and account deletion.
 6. Connect an AI Gateway account/key. Set AI_GATEWAY_API_KEY and optionally change LOOKU_AI_MODEL. Model API calls have provider costs; the API enforces an initial limit of 20 AI operations per user per UTC day.
-7. Add the app URL to Supabase Auth's site URL and allowed redirect URLs, including /auth/callback.
+7. Add `https://looku-ai-mvp.vercel.app` and its `/auth/callback` URL to Supabase Auth allowed URLs until a custom domain is attached. To remove email confirmation, open Supabase Dashboard → Authentication → Sign In / Providers → Email and disable **Confirm email**. The project-management connection available to this builder can manage the database but does not expose this Auth provider setting, so this switch must be changed in the dashboard.
 8. Run npm install, npm run dev, npm run typecheck, and npm run build.
 
 ## Environment variables
@@ -38,7 +38,7 @@ See .env.example. Never commit .env.local, provider secrets or the Supabase serv
 - Products are not shown to shoppers until the record is both active and approved. The application intentionally does not seed fabricated retailer products, prices, stock or affiliate relationships.
 - Account deletion clears private images and then deletes the authenticated user (and cascading personal rows); the route requires an exact email confirmation and a server-side service-role key.
 - Calendar and retailer integrations are optional. They must be enabled only after OAuth scopes and merchant permissions are configured.
-- The initial MVP has no virtual try-on model included. Add only a model/provider whose commercial terms and data handling have been reviewed.
+- The virtual fitting room is wired to FASHN but remains disabled until the server-only API key and prepaid provider credits are configured. Do not treat it as active without a successful provider call.
 
 ## Deployment
 
@@ -46,10 +46,13 @@ Import Mark2631/looku.ai into the intended Vercel team. Add the environment vari
 
 ## Research and integrations
 
+The Occasion Studio combines an event/date/venue/dress-code brief, actual available wardrobe items, budget-limited shopping-gap checks and saved planning. Its database contains 16 occasion playbooks, 20 shopping-gap guides and eight Kenyan retailer research leads. Those are reference content—not user garments, products for sale, or partnership claims.
+
+
 The Style Intelligence screen presents the source, takeaway, product application and limitations of each research item. Research is injected into the stylist prompt as guidance; it is not treated as a universal fashion law. Recommendation logic prioritizes available owned garments, occasion and personal constraints, then balances color/category and wear-history signals. Actual weather and calendar context are sent only when configured, available and user-authorized.
 
 The virtual fitting room uses a paid FASHN API only after the user submits a photo and chooses a garment. It uses a small daily quota, short-lived image URLs and private result storage. Generated previews are illustrative and are not fit/sizing guarantees. Review current provider terms, image handling and pricing before enabling the key. No paid credentials are committed to GitHub.
 
 ## Product boundaries
 
-The app does not invent store inventory. Until approved retailer data is onboarded, the shop displays an honest empty state and lets each user save private wishlist links. AI should never substitute imaginary clothing for a user's actual wardrobe.
+The app does not invent store inventory. Until approved retailer data is onboarded, the in-app product catalog stays empty and users can browse researched external retailers. These retailer leads are not partners; product images, stock, pricing and affiliate relationships are not copied or claimed. AI should never substitute imaginary clothing for a user's actual wardrobe.
