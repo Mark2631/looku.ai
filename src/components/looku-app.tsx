@@ -29,7 +29,7 @@ type OutfitPlan = { id: string; user_id: string; plan_date: string; event_title:
 type Product = { id: string; title: string; description: string | null; category: string; brand: string | null; merchant: string; currency: string; price: number | null; image_url: string | null; product_url: string; affiliate_url: string | null; country_code: string[]; sizes: string[]; is_active?: boolean; is_approved?: boolean };
 type Wish = { id: string; user_id: string; title: string; product_url: string | null; note: string | null; created_at: string };
 type Profile = { full_name: string | null; style_preferences: Record<string, unknown>; onboarding_completed: boolean };
-type Modal = "garment" | "plan" | "wish" | "look" | "merchant" | "product" | "feedback" | null;
+type Modal = "garment" | "edit-garment" | "plan" | "wish" | "look" | "merchant" | "product" | "feedback" | null;
 type ChatMessage = { role: "user" | "assistant"; text: string };
 type CalendarEvent = { id: string; title: string; description: string; location: string; start: string; end: string; url: string | null };
 type CalendarPayload = { configured: boolean; connected: boolean; accountEmail?: string | null; events: CalendarEvent[]; message?: string; error?: string };
@@ -105,6 +105,7 @@ export function LookuApp() {
   const [modalBusy, setModalBusy] = useState(false);
   const [modalError, setModalError] = useState("");
   const [modalOutfitId, setModalOutfitId] = useState<string | null>(null);
+  const [editingGarment, setEditingGarment] = useState<WardrobeItem | null>(null);
   const [modalDate, setModalDate] = useState(todayIso());
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [modalPlanTitle, setModalPlanTitle] = useState("Outfit plan");
@@ -392,6 +393,28 @@ export function LookuApp() {
     showToast("Added to your LOOKU planner. Choose an outfit when you're ready.");
   }
 
+  async function submitEditGarment(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!user || !editingGarment) return;
+    setModalBusy(true); setModalError("");
+    const form = new FormData(e.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const brand = String(form.get("brand") || "").trim();
+    const category = String(form.get("category") || "Other");
+    const colors = String(form.get("colors") || "").split(",").map(value => value.trim()).filter(Boolean).slice(0,5);
+    const formality = Number(form.get("formality") || 5);
+    if (!name) { setModalError("Garment name is required."); setModalBusy(false); return; }
+    const { error } = await createClient().from("wardrobe_items").update({
+      name: name.slice(0,100), brand: brand || null, category, colors,
+      formality: Math.min(10, Math.max(1, formality)),
+      attributes: { ...(editingGarment.attributes || {}), manualCorrection: true, correctedAt: new Date().toISOString() },
+      updated_at: new Date().toISOString(),
+    }).eq("id", editingGarment.id).eq("user_id", user.id);
+    if (error) { setModalError(error.message || "Couldn't update this garment."); setModalBusy(false); return; }
+    await loadData(user.id);
+    setEditingGarment(null); setModal(null); setModalBusy(false); showToast("Garment details updated.");
+  }
+
   async function submitGarment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!user) return;
     setModalBusy(true); setModalError("");
@@ -607,6 +630,8 @@ export function LookuApp() {
     await generateLooks(text, occasion, true);
   }
 
+  function openEditGarment(item: WardrobeItem) { setEditingGarment(item); setModalError(""); setModal("edit-garment"); }
+
   function openModal(next: Modal, outfitId: string | null = null, planDate = todayIso(), plan?: OutfitPlan) {
     setModalError(""); setModalOutfitId(plan?.outfit_id || outfitId); setModalDate(planDate);
     setEditingPlanId(plan?.id || null); setModalPlanTitle(plan?.event_title || "Outfit plan");
@@ -656,7 +681,22 @@ export function LookuApp() {
     let title = "";
     let content: ReactNode = null;
     const close = () => { if (!modalBusy) { setModal(null); setModalError(""); } };
-    if (modal === "garment") {
+    if (modal === "edit-garment" && editingGarment) {
+      title = "Edit garment details";
+      content = <form onSubmit={submitEditGarment}>
+        <div style={{ display:"flex",gap:13,alignItems:"center",marginBottom:18 }}>
+          {editingGarment.image_url ? <img src={editingGarment.image_url} alt={editingGarment.name} style={{width:82,height:96,objectFit:"cover",borderRadius:12}}/> : <div className="avatar lg"><Shirt/></div>}
+          <div><span className="badge neutral">Your item</span><p className="small muted" style={{lineHeight:1.6,margin:"8px 0 0"}}>Correct any AI-generated details. Your original photo stays private and unchanged.</p></div>
+        </div>
+        <label className="field">Garment name<input className="input" name="name" required maxLength={100} defaultValue={editingGarment.name}/></label>
+        <label className="field">Category<select className="input" name="category" defaultValue={editingGarment.category}>{categories.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}</select></label>
+        <label className="field">Main colors <small>Separate multiple colors with commas</small><input className="input" name="colors" maxLength={160} defaultValue={(editingGarment.colors||[]).join(", ")} placeholder="e.g. navy, cream"/></label>
+        <label className="field">Brand (optional)<input className="input" name="brand" maxLength={120} defaultValue={editingGarment.brand||""}/></label>
+        <label className="field">Formality · <span className="muted">1 casual to 10 formal</span><input className="input" name="formality" type="range" min="1" max="10" defaultValue={editingGarment.formality} style={{padding:"7px 0",border:0,boxShadow:"none"}}/></label>
+        {modalError && <ErrorNotice>{modalError}</ErrorNotice>}
+        <div className="modal-actions"><button type="button" className="button" onClick={close} disabled={modalBusy}>Cancel</button><button type="submit" className="button primary" disabled={modalBusy}>{modalBusy?"Saving…":"Save changes"}</button></div>
+      </form>;
+    } else if (modal === "garment") {
       title = "Add to your wardrobe";
       content = <form onSubmit={submitGarment}>
         <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 17 }}>Upload a clear photo of one garment. Your image is stored privately. LOOKU will try to identify the garment, and you can correct the details afterwards.</p>
@@ -786,7 +826,7 @@ export function LookuApp() {
       <div className="filter-row">{categories.map(cat=><button key={cat} className={"filter-pill "+(filter===cat?"active":"")} onClick={()=>setFilter(cat)}>{cat}{cat==="All"?" ("+items.length+")":""}</button>)}</div>
       {loadingData ? <div className="garment-grid">{[1,2,3,4].map(n=><div key={n} className="garment-card"><div className="skeleton" style={{height:210}}/><div style={{padding:13}}><div className="skeleton" style={{height:12,width:"70%"}}/><div className="skeleton" style={{height:10,width:"45%",marginTop:10}}/></div></div>)}</div> : filteredItems.length ? <div className="garment-grid">{filteredItems.map(item=><article className="garment-card" key={item.id}>
         {item.image_url ? <img className="garment-image" src={item.image_url} alt={item.name} loading="lazy"/> : <div className="garment-image" style={{ display: "grid", placeItems: "center" }}><Shirt size={35} color="#8c8f82"/></div>}
-        <div className="garment-content"><div className="row" style={{ gap: 5 }}><h3 title={item.name}>{item.name}</h3><span className={"tag"}>{item.status==="available"?"Ready":item.status==="laundry"?"Laundry":"Retired"}</span></div><p>{item.brand ? item.brand+" · " : ""}{item.category} · {(item.colors||[]).join(", ")||"Color not set"}</p><div className="tool-row"><button className="button compact" onClick={()=>{ setMood("Style the garment named "+item.name+" ("+item.category+"). Keep this piece in the outfit."); setScreen("Stylist"); void generateLooks("Style the garment named "+item.name+" and keep it in the outfit.", occasion); }}><Sparkles size={12}/>Style</button><button className="icon-button" title={item.status==="available"?"Mark as in laundry":"Mark ready to wear"} onClick={()=>void toggleGarmentStatus(item)} style={{height:32,width:32}}>{item.status==="available"?<Clock3 size={14}/>:<Check size={14}/>}</button><button className="icon-button" title="Remove garment" onClick={()=>void removeGarment(item)} style={{height:32,width:32}}><Trash2 size={14}/></button></div></div>
+        <div className="garment-content"><div className="row" style={{ gap: 5 }}><h3 title={item.name}>{item.name}</h3><span className={"tag"}>{item.status==="available"?"Ready":item.status==="laundry"?"Laundry":"Retired"}</span></div><p>{item.brand ? item.brand+" · " : ""}{item.category} · {(item.colors||[]).join(", ")||"Color not set"}</p><div className="tool-row"><button className="button compact" onClick={()=>{ setMood("Style the garment named "+item.name+" ("+item.category+"). Keep this piece in the outfit."); setScreen("Stylist"); void generateLooks("Style the garment named "+item.name+" and keep it in the outfit.", occasion); }}><Sparkles size={12}/>Style</button><button className="icon-button" title="Edit garment details" onClick={()=>openEditGarment(item)} style={{height:32,width:32}}><Pencil size={14}/></button><button className="icon-button" title={item.status==="available"?"Mark as in laundry":"Mark ready to wear"} onClick={()=>void toggleGarmentStatus(item)} style={{height:32,width:32}}>{item.status==="available"?<Clock3 size={14}/>:<Check size={14}/>}</button><button className="icon-button" title="Remove garment" onClick={()=>void removeGarment(item)} style={{height:32,width:32}}><Trash2 size={14}/></button></div></div>
       </article>)}</div> : <EmptyState icon={Shirt} title={search || filter!=="All" ? "No pieces match this view." : "Your closet should feel like yours."} body={search || filter!=="All" ? "Try another search or category." : "Add real clothes you own. LOOKU keeps them private, recognizes their attributes where AI is available, and uses available pieces when building outfits."} action={search || filter!=="All" ? "Clear filters" : "Add your first garment"} onAction={()=>search || filter!=="All" ? (setSearch(""),setFilter("All")) : openModal("garment")}/>}
       <div className="privacy-banner section"><LockKeyhole/><span><strong>Private by default.</strong> Garment images are stored in a private bucket and delivered with short-lived signed URLs. Only your account can access your wardrobe.</span></div>
     </>;
