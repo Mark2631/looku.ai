@@ -325,6 +325,18 @@ export function LookuApp() {
     } finally { setStyling(false); }
   }
 
+  async function recordSuggestionFeedback(idea: OutfitIdea, signal: "love" | "not-me" | "too-formal" | "too-casual" | "colors") {
+    if (!user?.id) return;
+    const entry={ signal, title:idea.title.slice(0,80), style:idea.style.slice(0,80), occasion, itemIds:idea.itemIds.slice(0,6), recordedAt:new Date().toISOString() };
+    const previous=Array.isArray(profile.style_preferences?.suggestionFeedback) ? profile.style_preferences.suggestionFeedback : [];
+    const preferences={...profile.style_preferences,suggestionFeedback:[entry,...previous].slice(0,30)};
+    const {error}=await createClient().from("profiles").update({style_preferences:preferences}).eq("id",user.id);
+    if(error){showToast("Could not save your style feedback.");return;}
+    setProfile(old=>({...old,style_preferences:preferences}));
+    showToast(signal==="love"?"Noted. I'll learn from this look.":"Saved your feedback. New ideas will take it into account.");
+    if(signal!=="love") setGenerated(old=>old.filter(x=>x!==idea));
+  }
+
   async function saveOutfit(idea: OutfitIdea, selectedOccasion = occasion) {
     if (!user) return;
     const validItems = idea.itemIds.filter(id => availableItems.some(item => item.id === id));
@@ -788,7 +800,7 @@ export function LookuApp() {
       <p className="tiny muted" style={{margin:"9px 0 0"}}>Sharing is optional. Only outfit names and styling text are shared; your wardrobe photos and account stay private.</p>
       <div className="tool-row" style={{ marginTop: 14 }}>
         <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button><button className="button compact" onClick={()=>{ switchScreen("TryOn"); showToast("Choose an owned garment from this look to preview on your photo. Full multi-piece outfit rendering is not yet supported."); }}><Camera size={14}/>See on me</button>
-        <button className="button compact" onClick={() => void shareOutfitIdea(idea)}><ExternalLink size={14}/>Share outfit idea</button>
+        <button className="button compact" onClick={() => void shareOutfitIdea(idea)}><ExternalLink size={14}/>Share outfit idea</button><button className="button compact" onClick={()=>void recordSuggestionFeedback(idea,"love")}><Heart size={13}/>Love this</button><button className="button compact" onClick={()=>void recordSuggestionFeedback(idea,"not-me")}><ThumbsDown size={13}/>Not my style</button>
         <button className="button compact" onClick={() => { setMood("Keep the idea but make it more relaxed."); void generateLooks("Keep the idea but make it more relaxed.", occasion); }}>More relaxed</button>
         <button className="button compact" onClick={() => { setMood("Keep the general style but make it more formal."); void generateLooks("Keep the general style but make it more formal.", occasion); }}>More formal</button>
       </div>
