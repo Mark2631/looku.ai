@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -109,7 +109,7 @@ export function LookuApp() {
   const [communityDraft,setCommunityDraft] = useState<{id:string;title:string;occasion:string;coverPath:string}|null>(null);
   const [showOutfitScanner, setShowOutfitScanner] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [lookMenuId, setLookMenuId] = useState<string | null>(null);
+  const [lookMenu, setLookMenu] = useState<{ id: string; top: number; left: number; above: boolean } | null>(null);
   const [likedOutfitIds, setLikedOutfitIds] = useState<string[]>([]);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [loadingData, setLoadingData] = useState(false);
@@ -308,7 +308,7 @@ export function LookuApp() {
   const timeGreeting = greetingForHour(localHour);
 
 
-  function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); setLookMenuId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); setLookMenu(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
 
   function setLookuTheme(next: "dark" | "light") {
     setTheme(next);
@@ -319,13 +319,23 @@ export function LookuApp() {
   function startNewLook() {
     setScreen("Today");
     setMoreOpen(false);
-    setLookMenuId(null);
+    setLookMenu(null);
     setChatInput("");
     setMood("");
     setGenerated([]);
     setAiError("");
     setChat([{ role: "assistant", text: "Tell me the occasion, mood, or piece you want to build around. I’ll help make a look from your real wardrobe." }]);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function toggleLookMenu(id: string, event: ReactMouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = 180;
+    const above = window.innerHeight - rect.bottom < menuHeight;
+    const top = above ? rect.top - 7 : rect.bottom + 7;
+    const menuWidth = Math.min(190, window.innerWidth - 20);
+    const left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.right - menuWidth));
+    setLookMenu(current => current?.id === id ? null : { id, top, left, above });
   }
 
   function startVoiceInput() {
@@ -804,8 +814,17 @@ export function LookuApp() {
   }
 
   async function sendChat(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const text = chatInput.trim(); if (!text || styling) return;
-    setChat(prev => [...prev, { role: "user", text }]); setChatInput("");
+    e.preventDefault();
+    const text = chatInput.trim();
+    if (!text || styling) return;
+    if (availableItems.length < 2) {
+      setChat(previous => [...previous, { role: "user", text }, { role: "assistant", text: "I’ve kept your request. To build a complete look from your real clothes, add at least two available wardrobe items with the + button. Your prompt is still in the box when you come back." }]);
+      setChatInput(text);
+      showToast("Your prompt is saved in the box. Add two wardrobe items to generate a look.");
+      return;
+    }
+    setChat(previous => [...previous, { role: "user", text }]);
+    setChatInput("");
     await generateLooks(text, occasion, true);
   }
 
@@ -1011,13 +1030,13 @@ export function LookuApp() {
                 <div className="looku-card-actions">
                   <button className="looku-card-action" type="button" onClick={() => { void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }} aria-label={"Like " + idea.title} title="Like this look"><Heart size={14}/></button>
                   <button className="looku-card-action" type="button" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save this look"><Bookmark size={14}/></button>
-                  <button className={"looku-card-action" + (lookMenuId === menuId ? " active" : "")} type="button" onClick={() => setLookMenuId(current => current === menuId ? null : menuId)} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
+                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
                 </div>
-                {lookMenuId === menuId && <div className="looku-action-menu">
-                  <button type="button" onClick={() => { setLookMenuId(null); void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }}><Heart size={14}/>Like this look</button>
-                  <button type="button" onClick={() => { setLookMenuId(null); void saveOutfit(idea); }}><Bookmark size={14}/>Pin to saved</button>
-                  <button type="button" onClick={() => { setLookMenuId(null); void shareOutfitIdea(idea); }}><ArrowUpRight size={14}/>Share look</button>
-                  <button type="button" onClick={() => { setLookMenuId(null); setChatInput("Make a new version of " + idea.title + ", with one thoughtful change."); document.getElementById("looku-composer-input")?.focus(); }}><WandSparkles size={14}/>Create a variation</button>
+                {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
+                  <button type="button" onClick={() => { setLookMenu(null); void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }}><Heart size={14}/>Like this look</button>
+                  <button type="button" onClick={() => { setLookMenu(null); void saveOutfit(idea); }}><Bookmark size={14}/>Pin to saved</button>
+                  <button type="button" onClick={() => { setLookMenu(null); void shareOutfitIdea(idea); }}><ArrowUpRight size={14}/>Share look</button>
+                  <button type="button" onClick={() => { setLookMenu(null); setChatInput("Make a new version of " + idea.title + ", with one thoughtful change."); document.getElementById("looku-composer-input")?.focus(); }}><WandSparkles size={14}/>Create a variation</button>
                 </div>}
               </div>
             </article>;
@@ -1034,12 +1053,12 @@ export function LookuApp() {
                 <div className="looku-card-actions">
                   <button className="looku-card-action" type="button" onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like this look"><Heart size={14}/></button>
                   <button className="looku-card-action" type="button" onClick={() => { openModal("plan", outfit.id); }} aria-label={"Plan " + outfit.title} title="Plan this look"><CalendarPlus size={14}/></button>
-                  <button className={"looku-card-action" + (lookMenuId === menuId ? " active" : "")} type="button" onClick={() => setLookMenuId(current => current === menuId ? null : menuId)} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
+                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
                 </div>
-                {lookMenuId === menuId && <div className="looku-action-menu">
-                  <button type="button" onClick={() => { setLookMenuId(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
-                  <button type="button" onClick={() => { setLookMenuId(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Add to calendar</button>
-                  <button type="button" onClick={() => { setLookMenuId(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open memory</button>
+                {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
+                  <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
+                  <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Add to calendar</button>
+                  <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open memory</button>
                 </div>}
               </div>
             </article>;
@@ -1109,130 +1128,41 @@ export function LookuApp() {
   }
 
   function renderStylist() {
-    return <>
-      <div><span className="eyebrow">LESS GUESSWORK. MORE YOU.</span><h1 className="page-title serif">Meet your stylist.</h1><p className="page-subtitle">Tell LOOKU what matters today. It will build around available pieces in your wardrobe and explain the thinking behind each look.</p></div>
-      <div className="stylist-layout section">
-        <section className="chat-panel">
-          <div className="chat-head"><div className="avatar" style={{ background: "#e7eade" }}><Sparkles size={17}/></div><div style={{ flex: 1 }}><strong style={{ fontSize: 13 }}>LOOKU Stylist</strong><div className="tiny muted" style={{ marginTop: 4 }}>Wardrobe-aware · Personal · Private</div></div><span className="badge neutral"><ShieldCheck size={12}/>Your closet only</span></div>
-          <div className="chat-messages" aria-live="polite">{chat.map((message,i)=><div className={"chat-bubble "+(message.role==="user"?"user":"")} key={i}>{message.text}</div>)}{styling && <div className="chat-bubble"><LoaderCircle size={15} className="spin-icon" style={{ display:"inline",verticalAlign:"middle",marginRight:7 }}/>Checking your available pieces and building looks…</div>}</div>
-          <form className="chat-compose" onSubmit={sendChat}><textarea className="input textarea" rows={2} maxLength={1000} value={chatInput} onChange={e=>setChatInput(e.target.value)} placeholder="e.g. Interview tomorrow, smart but not too formal…" aria-label="Describe your styling request"/><button className="button primary" type="submit" disabled={styling||!chatInput.trim()} aria-label="Send styling request"><ArrowRight size={16}/></button></form>
-        </section>
-        <aside className="chat-side">
-          <div className="surface"><span className="eyebrow">SET THE SCENE</span><label className="field" style={{ marginTop: 15 }}>Occasion<select className="input" value={occasion} onChange={e=>setOccasion(e.target.value)}>{occasions.map(o=><option key={o}>{o}</option>)}</select></label><label className="field">Style direction<select className="input" value={styleName} onChange={async e=>{const prefs={...profile.style_preferences,style:e.target.value};setProfile(p=>({...p,style_preferences:prefs}));if(user){const {error}=await createClient().from("profiles").update({style_preferences:prefs}).eq("id",user.id);if(error)showToast("Could not save preference yet.");}}}>{styles.map(s=><option key={s}>{s}</option>)}</select></label><button className="button primary" style={{ width:"100%" }} onClick={()=>void generateLooks(mood||"Give me three distinct complete outfit options for the selected occasion. Respect my saved style preferences.",occasion)} disabled={styling}><WandSparkles size={15}/>{styling?"Working…":"Generate outfit ideas"}</button></div>
-          <div className="surface soft"><span className="eyebrow">YOUR STYLE MEMORY</span><p style={{ fontSize: 12, lineHeight: 1.7, margin: "10px 0 13px" }}>The stylist can use saved preferences and the feedback you give it. Explicit likes and dislikes are stored to improve future ranking.</p><button className="button compact" onClick={()=>switchScreen("Settings")}>Edit preferences <ArrowRight size={13}/></button></div>
-          <div className="surface"><span className="eyebrow">A FEW GOOD PROMPTS</span><div className="stack" style={{ gap: 8, marginTop: 12 }}>{["Make this more relaxed without changing the shoes.","Build a complete look around my favorite item.","Plan something comfortable for a warm day.","Avoid repeating the trousers I wore yesterday."].map(p=><button key={p} onClick={()=>{setChatInput(p);}} className="button ghost" style={{ justifyContent:"start",borderRadius:12,whiteSpace:"normal",textAlign:"left",lineHeight:1.5 }}>{p}</button>)}</div></div>
-        </aside>
+    return <div className="looku-chat-home looku-stylist-page">
+      <section className="looku-home-intro" style={{ textAlign: "left", marginLeft: 0 }}>
+        <span className="eyebrow">NEW LOOK · YOUR PERSONAL STYLIST</span>
+        <h1 className="looku-home-title">Let’s make a look.</h1>
+        <p className="looku-home-subtitle" style={{ marginLeft: 0 }}>Describe the occasion, your mood, your budget, or one item you want to wear. I’ll work from the wardrobe and preferences you’ve shared.</p>
+      </section>
+      {chat.length > 1 ? <section className="looku-home-thread" aria-live="polite">
+        {chat.slice(1).map((message, index) => <div key={index} className={"looku-home-message " + (message.role === "user" ? "user" : "")}>{message.text}</div>)}
+        {styling && <div className="looku-home-message"><LoaderCircle size={14} className="spin-icon" style={{ display: "inline", verticalAlign: "middle", marginRight: 7 }}/>Building a look from your available clothes…</div>}
+      </section> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Start with a real-life brief.</strong>Try “campus, warm weather, relaxed but put together” or “help me wear these black trousers differently.”</div><button type="button" className="button compact" onClick={() => switchScreen("Closet")}><Shirt size={13}/>My wardrobe</button></div>}
+      {aiError && <div className="section"><ErrorNotice>{aiError}</ErrorNotice></div>}
+      <div className="looku-prompt-chips" aria-label="Styling ideas">
+        {[
+          { label: "Everyday", prompt: "Create a comfortable, intentional everyday outfit for me.", occasion: "Everyday" },
+          { label: "Date night", prompt: "Create a confident date-night look that still feels like me.", occasion: "Date night" },
+          { label: "Job interview", prompt: "Build a polished interview look that is professional without feeling overdressed.", occasion: "Job interview" },
+          { label: "Wear one item differently", prompt: "Give me a new way to style a favourite item from my wardrobe.", occasion: "Everyday" },
+        ].map(chip => <button key={chip.label} className="looku-prompt-chip" type="button" onClick={() => { setOccasion(chip.occasion); setChatInput(chip.prompt); document.getElementById("looku-composer-input")?.focus(); }}>{chip.label}</button>)}
       </div>
-      <section className="section"><div className="section-head"><div><span className="eyebrow">YOUR NEW EDIT</span><h2 className="section-title">Outfit ideas</h2><p className="section-note">AI-generated suggestions are validated against actual available wardrobe item IDs.</p></div></div>
-        {aiError && <div style={{ marginBottom: 15 }}><ErrorNotice>{aiError}</ErrorNotice></div>}
-        {generated.length ? <><div className="privacy-banner" style={{marginBottom:14}}><ShieldCheck/><span><strong>{stylingMethod === "wardrobe-rules" ? "Wardrobe matching mode" : "AI-styled using your wardrobe"}</strong> {stylingNotice || "Every recommended item belongs to your available wardrobe."}</span></div><div className="stack">{generated.map((idea,index)=>renderOutfitIdea(idea,index))}</div></> : <EmptyState icon={WandSparkles} title="Your next look starts here." body={availableItems.length<2 ? "Add at least two available pieces to your closet. The stylist won't invent garments for you." : "Describe a situation or generate three outfit ideas. Each option will use only clothes you own."} action={availableItems.length<2?"Open closet":"Generate outfit ideas"} onAction={()=>availableItems.length<2?switchScreen("Closet"):void generateLooks("Build three distinct outfits appropriate for my day.",occasion)}/>}
-      </section>
-    </>;
+      {generated.length > 0 && <section className="looku-section">
+        <div className="looku-section-head"><div><h2>Your latest suggestions</h2><p>Save one, or adjust the brief below to explore a variation.</p></div><button type="button" className="looku-section-link" onClick={() => switchScreen("Today")}>Home <ArrowRight size={13}/></button></div>
+        <div className="looku-shelf-row">{generated.map((idea, index) => {
+          const pieces = outfitItems(idea);
+          return <article className="looku-look-tile" key={idea.title + index}>
+            <div className="looku-look-visual"><div className="looku-piece-mosaic">{pieces.slice(0, 4).map(piece => piece.image_url ? <img key={piece.id} src={piece.image_url} alt={piece.name}/> : <div key={piece.id} className="looku-piece-placeholder"><Shirt size={20}/></div>)}</div></div>
+            <div className="looku-look-details"><strong>{idea.title}</strong><p>{idea.style}</p><p style={{ whiteSpace: "normal", maxHeight: "4.5em" }}>{idea.reason}</p>
+              <div className="looku-card-actions"><button type="button" className="looku-card-action" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save look"><Bookmark size={14}/></button><button type="button" className="looku-card-action" onClick={() => { setChatInput("Create a variation of " + idea.title + " while keeping the pieces that work."); document.getElementById("looku-composer-input")?.focus(); }} aria-label={"Create variation of " + idea.title} title="Create variation"><WandSparkles size={14}/></button><button type="button" className="looku-card-action" onClick={() => void shareOutfitIdea(idea)} aria-label={"Share " + idea.title} title="Share look"><ArrowUpRight size={14}/></button></div>
+            </div>
+          </article>;
+        })}</div>
+      </section>}
+    </div>;
   }
 
-  function renderPlanner() {
-    const start = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1);
-    const first = new Date(start.getFullYear(), start.getMonth(), 1).getDay();
-    const daysInMonth = new Date(start.getFullYear(), start.getMonth()+1, 0).getDate();
-    const monthLabel = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
-    return <>
-      <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">MAKE ROOM FOR YOUR DAY</span><h1 className="page-title serif">Plan your looks.</h1><p className="page-subtitle">Schedule outfits around real events. Calendar integration can be enabled later with explicit read-only permission.</p></div><button className="button primary" onClick={()=>openModal("plan")}><Plus size={15}/>Plan an outfit</button></div>
-      <section className="surface section">
-        <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">OPTIONAL CALENDAR CONNECTION</span><h2 className="section-title">Bring your day into LOOKU.</h2><p className="section-note">Read-only Google Calendar access helps you spot upcoming occasions. LOOKU never edits or deletes your Google events.</p></div><CalendarDays size={25}/></div>
-        <div className="tool-row" style={{ marginTop: 16 }}>
-          {!calendarStatus.configured ? <button className="button primary" disabled title="Server configuration is required"><CalendarDays size={14}/>Connect Google Calendar</button>
-            : calendarStatus.connected ? <><span className="badge"><Check size={12}/>Connected{calendarStatus.accountEmail ? " · "+calendarStatus.accountEmail : ""}</span><button className="button compact" onClick={()=>void refreshCalendarEvents()} disabled={calendarLoading}>{calendarLoading?"Refreshing…":"Refresh events"}</button><button className="button compact" onClick={()=>void disconnectCalendar()}>Disconnect</button></>
-            : <a className="button primary" href="/api/calendar/connect"><CalendarDays size={14}/>Connect Google Calendar</a>}
-        </div>
-        {!calendarStatus.configured && <p className="tiny muted" style={{ lineHeight: 1.7, margin: "12px 0 0" }}>Provider setup is required before connecting: Google OAuth client credentials, a private token-encryption key and the LOOKU server database credentials. No calendar permission is requested until you start the connection.</p>}
-        {calendarMessage && <div style={{ marginTop: 12 }}><ErrorNotice>{calendarMessage}</ErrorNotice></div>}
-        {calendarLoading && <p className="small muted" style={{ marginTop: 14 }}><LoaderCircle size={14} className="spin-icon" style={{ display:"inline",verticalAlign:"middle",marginRight:6 }}/>Loading upcoming events…</p>}
-        {calendarStatus.connected && calendarEvents.length===0 && !calendarLoading && <p className="small muted" style={{ marginTop: 14 }}>No upcoming events were returned for the next 45 days.</p>}
-        {calendarEvents.length>0 && <div className="stack" style={{ marginTop: 15 }}>{calendarEvents.map(event=><div className="outfit-row" key={event.id}><div className="avatar"><CalendarDays size={15}/></div><div style={{ minWidth:0, flex:1 }}><strong>{event.title}</strong><small>{formatDate(event.start.slice(0,10))}{event.start.includes("T")?" · "+new Date(event.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):" · All day"}{event.location?" · "+event.location:""}</small></div><button className="button compact" onClick={()=>void importCalendarEvent(event)} disabled={plans.some(p=>p.external_event_id===event.id)}>{plans.some(p=>p.external_event_id===event.id)?"Added":"Add to LOOKU"}</button></div>)}</div>}
-      </section>
-      <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
-      <section className="surface section"><div className="calendar-header"><button className="icon-button" aria-label="Previous month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()-1,1))}><ChevronLeft size={16}/></button><div style={{flex:1,textAlign:"center"}}><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><button className="icon-button" aria-label="Next month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()+1,1))}><ChevronRight size={16}/></button></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
-        {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
-      </div><p className="tiny muted" style={{ margin:"15px 0 0" }}>Choose a date to create a plan. The date is set in the form so you can add an event name, occasion and saved outfit.</p></section>
-      <section className="section"><div className="section-head"><div><span className="eyebrow">UP NEXT</span><h2 className="section-title">Your upcoming plans</h2></div></div>
-        {plans.filter(p=>p.plan_date>=todayIso()).length ? <div className="stack">{plans.filter(p=>p.plan_date>=todayIso()).sort((a,b)=>a.plan_date.localeCompare(b.plan_date)).map(plan=><div className="surface row" key={plan.id}><div style={{ display:"flex",gap:13,alignItems:"center",minWidth:0 }}><div className="avatar"><CalendarDays size={16}/></div><div style={{ minWidth:0 }}><strong style={{fontSize:13}}>{plan.event_title}</strong><p className="tiny muted" style={{margin:"5px 0 0"}}>{formatDate(plan.plan_date)} · {plan.occasion}{plan.notes?" · "+plan.notes:""}</p></div></div><div className="tool-row"><button className="button compact" onClick={()=>openModal("plan",plan.outfit_id,plan.plan_date,plan)}><Pencil size={12}/>Edit</button><button className="icon-button" onClick={async()=>{if(!user||!confirm("Delete this plan?"))return;const {error}=await createClient().from("outfit_plans").delete().eq("id",plan.id).eq("user_id",user.id);if(error)showToast("Couldn't remove plan.");else{setPlans(p=>p.filter(x=>x.id!==plan.id));showToast("Plan removed.");}}} aria-label="Delete plan"><Trash2 size={15}/></button></div></div>)}</div> : <EmptyState icon={CalendarDays} title="Your calendar has room." body="Add an event and attach a saved look, or create the plan now and choose an outfit later." action="Add your first plan" onAction={()=>openModal("plan")}/>}
-      </section>
-    </>;
-  }
-
-  function renderLooks() {
-    return <>
-      <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">A PRIVATE RECORD OF YOUR STYLE</span><h1 className="page-title serif">Your lookbook.</h1><p className="page-subtitle">Saved combinations, outfits you wore and moments you want to remember. Nothing is public unless you choose to share it in a future community feature.</p></div><button className="button primary" onClick={()=>openModal("look")}><Plus size={15}/>Record a look</button></div>
-      <div className="filter-row section"><button className="filter-pill active">All looks · {savedLooks.length}</button><span className="badge neutral"><LockKeyhole size={12}/>Private by default</span></div>
-      {savedLooks.length ? <div className="look-grid">{savedLooks.map(outfit=>{const pieces=outfitItems(outfit);return <article className="look-card" key={outfit.id}><img src={outfit.cover_url||pieces.find(i=>i.image_url)?.image_url||heroImage} alt={outfit.title} loading="lazy"/><div className="look-info"><div className="row"><span className="badge neutral">{outfit.status==="worn"?"WORN":outfit.status==="planned"?"PLANNED":"SAVED"}</span><button className="icon-button" style={{width:30,height:30}} onClick={()=>void deleteOutfit(outfit)} aria-label="Delete look"><Trash2 size={13}/></button></div><strong style={{display:"block",marginTop:11}}>{outfit.title}</strong><p>{outfit.occasion} · {formatDate(outfit.worn_at||outfit.created_at)}</p>{pieces.length>0&&<p>{pieces.map(x=>x.name).join(" · ")}</p>}<div className="tool-row" style={{marginTop:12}}>{outfit.status!=="worn"&&<button className="button compact" onClick={()=>void markWorn(outfit)}><Check size={13}/>Wore this</button>}<button className="button compact" onClick={()=>void reactToOutfit(outfit,"like")} aria-label="Like look"><ThumbsUp size={13}/></button><button className="button compact" onClick={()=>void shareLook(outfit)} aria-label={"Share "+outfit.title}><ArrowUpRight size={13}/>Share</button>{outfit.cover_image_path&&<button className="button compact" onClick={()=>{setCommunityDraft({id:outfit.id,title:outfit.title,occasion:outfit.occasion,coverPath:outfit.cover_image_path!});switchScreen("Community");}}><Users size={13}/>Post in LOOKU</button>}<button className="button compact" onClick={()=>{switchScreen("TryOn");showToast("Choose a photographed garment for a single-piece virtual try-on.");}}><Camera size={13}/>Preview on me</button><button className="button compact" onClick={()=>void reactToOutfit(outfit,"dislike")} aria-label="Dislike look"><ThumbsDown size={13}/></button></div></div></article>})}</div> : <EmptyState icon={ImagePlus} title="Keep the looks you love." body="Save an AI-generated outfit or upload a real outfit photo. Over time this becomes a useful record of combinations you can repeat." action="Record a look" onAction={()=>openModal("look")}/>}
-      <section className="section"><div className="section-head"><div><span className="eyebrow">THE IDEAS YOU'RE CONSIDERING</span><h2 className="section-title">Wishlist</h2><p className="section-note">Saved product links aren't owned clothing and won't be used in outfit generation.</p></div><button className="button compact" onClick={()=>openModal("wish")}><Plus size={13}/>Add idea</button></div>
-      {wishlist.length ? <div className="stack">{wishlist.map(w=><div className="surface row" key={w.id}><div style={{minWidth:0}}><strong style={{fontSize:13}}>{w.title}</strong><p className="small muted" style={{margin:"5px 0 0"}}>{w.note||"Personal shopping idea"}{w.product_url&&safeHostname(w.product_url)?" · "+safeHostname(w.product_url):""}</p>{w.product_url&&safeExternalUrl(w.product_url)&&<a className="text-action" href={safeExternalUrl(w.product_url)||undefined} target="_blank" rel="noreferrer">Open retailer <ExternalLink size={11} style={{display:"inline"}}/></a>}</div><button className="icon-button" onClick={()=>void deleteWish(w)} aria-label="Remove wishlist idea"><Trash2 size={14}/></button></div>)}</div> : <div className="surface row"><div><strong style={{fontSize:12}}>Keep your future purchases intentional.</strong><p className="small muted" style={{margin:"5px 0 0"}}>Save a product URL and why it belongs in your wardrobe.</p></div><button className="button compact" onClick={()=>openModal("wish")}>Add wishlist idea</button></div>}
-      </section>
-    </>;
-  }
-
-  function renderShop() {
-    return <>
-      <div><span className="eyebrow">BUY WITH INTENTION</span><h1 className="page-title serif">The curated shop.</h1><p className="page-subtitle">Shop for a genuine gap in your wardrobe. Approved products appear when licensed merchant feeds are live; meanwhile, browse researched Kenyan retailers below.</p></div>
-      <div className="privacy-banner section"><ShieldCheck/><span><strong>No fake inventory.</strong> Prices and stock are not invented. The storefront will show only products with a reviewed source, permission to display their media, and a working merchant destination.</span></div>
-      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2><p className="section-note">Only your allow-listed admin account can manage these records.</p></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
-        {adminProducts.length ? <div className="stack" style={{marginTop:15}}>{adminProducts.map(p=><div className="outfit-row" key={p.id}>{p.image_url?<img src={p.image_url} alt=""/>:<div className="avatar"><ShoppingBag size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{p.title}</strong><small>{p.merchant} · {p.currency} {p.price ?? "price not set"}</small><div className="tool-row" style={{marginTop:7}}><button className="button compact" onClick={()=>void toggleProduct(p,"is_active")}>{p.is_active?"Hide":"Activate"}</button><button className="button compact" onClick={()=>void toggleProduct(p,"is_approved")}>{p.is_approved?"Unapprove":"Approve"}</button><button className="button compact" onClick={()=>void deleteProduct(p)}><Trash2 size={12}/>Delete</button></div></div><span className="badge neutral">{p.is_approved?"Approved":"Pending"}</span></div>)}</div> : <p className="small muted" style={{marginTop:12}}>No catalog items have been added yet.</p>}</section>}
-      <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">A considered edit, not endless scrolling.</h2></div></div>
-        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="We're curating the first collection." body="Retail listings will appear once merchants and product-image permissions are verified. You can still save individual product links to your wishlist." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
-      </section>
-      <RetailDiscover wardrobe={items} style={styleName} onSaveWishlist={saveOccasionWishlist}/>
-      {user && <ShoppingJournal userId={user.id}/>}
-      <section className="section surface soft"><div className="row" style={{alignItems:"start"}}><div><span className="eyebrow">ARE YOU A BRAND OR A SHOP?</span><h2 className="section-title">Make your products part of someone's style.</h2><p className="section-note" style={{maxWidth:490}}>Request a partnership to discuss a product feed, image permissions, stock updates and referral terms. We review all merchants before publishing.</p></div><Store size={27}/></div><button className="button" style={{marginTop:17}} onClick={()=>openModal("merchant")}>Apply as a merchant <ArrowRight size={14}/></button></section>
-    </>;
-  }
-
-  function renderInsights() {
-    return <StyleInsights
-      items={items}
-      outfits={outfits}
-      integrationHealth={integrationHealth}
-      calendarConnected={calendarStatus.connected}
-      weatherConnected={Boolean(weather)}
-      weatherCitySet={Boolean(weatherCity)}
-      productCount={products.length}
-      onStyleItem={(name) => {
-        setMood("Build a look featuring " + name + ".");
-        switchScreen("Stylist");
-        void generateLooks("Build a look featuring " + name + ".", occasion);
-      }}
-    />;
-  }
-
-  async function saveOccasionWishlist(title: string, url: string, note: string): Promise<boolean> {
-    if (!user) { showToast("Sign in to save a private wishlist."); return false; }
-    const safeUrl = safeExternalUrl(url);
-    if (!safeUrl) { showToast("Use a valid HTTPS product URL."); return false; }
-    const { error } = await createClient().from("wishlist_items").insert({
-      user_id: user.id,
-      title: title.slice(0, 160),
-      product_url: safeUrl,
-      note: note.slice(0, 500) || null,
-    });
-    if (error) { showToast("Couldn't save that product link. Please try again."); return false; }
-    await loadData(user.id);
-    showToast("Product link saved to your private wishlist.");
-    return true;
-  }
-
-  function renderOccasionStudio() {
-    return <OccasionStudio
-      items={items}
-      products={products}
-      generated={generated}
-      styling={styling}
-      onGenerate={(prompt, selectedOccasion) => { setOccasion(selectedOccasion); void generateLooks(prompt, selectedOccasion); }}
-      onPlan={(date, title, selectedOccasion) => { setOccasion(selectedOccasion); openModal("plan", null, date); setModalPlanTitle(title); setModalPlanOccasion(selectedOccasion); }}
-      onRenderLook={(idea, index) => renderOutfitIdea(idea, index)}
-      onSaveWishlist={saveOccasionWishlist}
-    />;
-  }
-
-  function renderTryOn() {
+    function renderTryOn() {
     return <TryOnRoom userId={user?.id || ""} items={items} configured={Boolean(integrationHealth?.tryOnConfigured)} />;
   }
 
@@ -1294,7 +1224,7 @@ export function LookuApp() {
       {screen !== "Today" && <footer className="looku-app-footer"><button type="button" className="text-action" onClick={() => switchScreen("Settings")}>Privacy & preferences</button><button type="button" className="text-action" onClick={() => switchScreen("Shop")}>Store</button></footer>}
     </main>
 
-    {screen === "Today" && <div className="looku-composer-dock">
+    {(screen === "Today" || screen === "Stylist") && <div className="looku-composer-dock">
       <form className="looku-composer-form" onSubmit={sendChat}>
         <button className="looku-composer-tool" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }} aria-label="Add wardrobe photo" title="Add from a photo"><Plus size={20}/></button>
         <textarea id="looku-composer-input" className="looku-composer-input" rows={1} maxLength={1000} value={chatInput} onChange={event => setChatInput(event.target.value)} placeholder="Describe the look you want…" aria-label="Describe the look you want"/>
