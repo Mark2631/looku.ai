@@ -913,14 +913,20 @@ export function LookuApp() {
     return <>
       <div className="today-hero">
         <div className="hero-copy">
-          <span className="eyebrow">YOUR DAILY EDIT · {formatDate(todayIso(), { weekday: "long", month: "long", day: "numeric" })}</span>
-          <h1 className="page-title serif">{timeGreeting},<br/>{greetingName}.</h1>
-          <p className="page-subtitle">{items.length ? "Your wardrobe is here. Let's find something that feels like you." : "Start with a few pieces you already own. Your first good outfit is closer than you think."}</p>
-          <div className="hero-actions"><button className="button primary" onClick={() => { switchScreen("Stylist"); if (availableItems.length >= 2) void generateLooks("Choose the best all-round outfit for my day.", occasion); }} disabled={styling}><Sparkles size={15}/>{styling?"Styling your wardrobe…":"Find my look"}<ArrowRight size={15}/></button><button className="button" onClick={() => switchScreen("Occasion")}><CalendarCheck size={14}/>Plan an occasion</button><button className="button" onClick={() => switchScreen("Closet")}>{items.length ? "Open my closet" : "Start with clothes I already own"}</button></div>
-          <div className="row" style={{ justifyContent: "start", gap: 10, marginTop: 25, flexWrap: "wrap" }}><span className="badge neutral"><Shirt size={13}/>{items.length} pieces</span><span className="badge neutral"><CalendarCheck size={13}/>{todayPlans.length} plans today</span><span className="badge neutral"><Heart size={13}/>{savedLooks.length} saved looks</span></div>
+          <span className="eyebrow">THE LOOKU EDIT · {formatDate(todayIso(), { weekday: "long", month: "long", day: "numeric" })}</span>
+          <span className="hero-personal">YOUR STYLE SPACE <span aria-hidden="true">✦</span> {timeGreeting}, {greetingName}</span>
+          <h1 className="page-title serif">Get dressed like<br/><em>you mean it.</em></h1>
+          <p className="page-subtitle">{items.length ? "More outfits, fewer decisions. Make something new from what you own — or discover your next favorite piece." : "A personal stylist that gets your taste. Start with a photo, explore looks, or tell us what you're dressing for. No wardrobe setup required to explore."}</p>
+          <div className="hero-actions"><button className="button primary" onClick={() => switchScreen("Stylist")}><Sparkles size={15}/>Explore my style<ArrowRight size={15}/></button><button className="button" onClick={() => {setShowOutfitScanner(true);switchScreen("Closet");}}><Camera size={15}/>Style from a photo</button><button className="button ghost" onClick={() => switchScreen("Shop")}><ShoppingBag size={14}/>Discover pieces</button></div>
+          <div className="hero-trust"><span><Check size={14}/> No full wardrobe upload</span><span><LockKeyhole size={14}/> Your photos stay private</span></div>
         </div>
-        <div className="hero-visual"><img src={heroImage} alt="Editorial fashion inspiration, not an outfit generated from your wardrobe" /><div className="hero-overlay"><div><span className="eyebrow">A NOTE TO SELF</span><strong>Style isn't more clothes. It's more ways to wear what you have.</strong></div><Sparkles size={21}/></div></div>
+        <div className="hero-visual"><img src={heroImage} alt="Fashion editorial inspiration — not a generated outfit from your wardrobe" /><div className="hero-visual-label"><span>THE EVERYDAY EDIT</span><strong>Looks that feel like you.</strong><button type="button" onClick={() => switchScreen("Community")}>Explore style inspiration <ArrowUpRight size={15}/></button></div></div>
       </div>
+      <section className="looku-jumpstart" aria-label="Start with your style">
+        <button type="button" onClick={() => {setShowOutfitScanner(true);switchScreen("Closet");}}><span className="jump-icon"><Camera size={21}/></span><span><strong>Wearing something?</strong><small>Scan your outfit, save the pieces</small></span><ArrowUpRight size={16}/></button>
+        <button type="button" onClick={() => switchScreen("TryOn")}><span className="jump-icon"><WandSparkles size={21}/></span><span><strong>See it on you</strong><small>Preview a look before deciding</small></span><ArrowUpRight size={16}/></button>
+        <button type="button" onClick={() => switchScreen("Occasion")}><span className="jump-icon"><CalendarCheck size={21}/></span><span><strong>Got somewhere to be?</strong><small>Dress for a real moment</small></span><ArrowUpRight size={16}/></button>
+      </section>
       {weather && <div className="surface row section" style={{ marginTop: 16, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}><div className="avatar"><CloudSun size={19}/></div><div><strong style={{ fontSize: 13 }}>{weather.location.name}{weather.location.region ? ", "+weather.location.region : ""} · {Math.round(weather.current.tempC)}°C</strong><p className="tiny muted" style={{ margin: "4px 0 0" }}>{weather.current.condition} · Feels like {Math.round(weather.current.feelsLikeC)}°C · Wind {Math.round(weather.current.windKph)} km/h</p></div></div>
         <span className="badge neutral">Live weather</span>
