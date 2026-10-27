@@ -16,6 +16,7 @@ import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
 import { QuickCloset } from "@/components/quick-closet";
+import { greetingForHour } from "@/lib/greeting";
 import { TryOnRoom } from "@/components/tryon-room";
 
 type Screen = "Today" | "Closet" | "Stylist" | "Occasion" | "TryOn" | "Plan" | "Looks" | "Shop" | "Insights" | "Settings";
@@ -282,7 +283,7 @@ export function LookuApp() {
   const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
   const [localHour,setLocalHour] = useState<number | null>(null);
   useEffect(() => { const update=()=>setLocalHour(new Date().getHours()); update(); const onVisible=()=>{if(document.visibilityState==="visible")update();}; document.addEventListener("visibilitychange",onVisible); window.addEventListener("focus",update); const clock=window.setInterval(update,60000); return ()=>{window.clearInterval(clock);window.removeEventListener("focus",update);document.removeEventListener("visibilitychange",onVisible);}; }, []);
-  const timeGreeting = localHour === null ? "Hello" : localHour < 12 ? "Good morning" : localHour < 17 ? "Good afternoon" : "Good evening";
+  const timeGreeting = greetingForHour(localHour);
 
 
   function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
