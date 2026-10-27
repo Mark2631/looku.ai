@@ -21,6 +21,17 @@ describe("wardrobe matcher", () => {
     expect(looks.length).toBe(1);
     expect(looks[0].itemIds).toEqual(["tee","jeans"]);
   });
+  it("ranks explicitly liked pieces above otherwise similar alternatives", () => {
+    const clothes=[item("liked-top","Tops"),item("other-top","Tops"),item("jeans","Bottoms"),item("shoes","Shoes")];
+    const looks=matchWardrobeOutfits(clothes,"Birthday",2,[],["liked-top"],[]);
+    expect(looks[0].itemIds).toContain("liked-top");
+  });
+  it("downranks garments in the avoided colors list", () => {
+    const a={...item("red-top","Tops"),colors:["red"]};
+    const b={...item("blue-top","Tops"),colors:["blue"]};
+    const looks=matchWardrobeOutfits([a,b,item("jeans","Bottoms"),item("shoes","Shoes")],"Campus",2,[],[],[],["red"]);
+    expect(looks[0].itemIds).toContain("blue-top");
+  });
   it("returns at most three unique combinations", () => {
     const clothes=[item("a","Tops"),item("b","Tops"),item("c","Bottoms"),item("d","Shoes")];
     const looks=matchWardrobeOutfits(clothes,"Birthday",3);
