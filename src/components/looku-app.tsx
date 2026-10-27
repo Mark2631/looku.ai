@@ -488,7 +488,8 @@ export function LookuApp() {
     const productUrl = String(form.get("product_url") || "").trim();
     const formality = Number(form.get("formality") || 5);
     const files = form.getAll("image").filter((value): value is File => value instanceof File && value.size > 0);
-    if (!files.length) { setModalError("Choose at least one garment photo."); setModalBusy(false); return; }
+    if (!files.length && !productUrl) { setModalError("Choose photos, or supply the product link for a garment you own. You can also use Quick Closet without either."); setModalBusy(false); return; }
+    if (!files.length && !enteredName) { setModalError("Name the garment you own before saving a product link."); setModalBusy(false); return; }
     if (files.length > 12) { setModalError("Add up to 12 garments per batch. You can repeat the process as your wardrobe grows."); setModalBusy(false); return; }
     if (productUrl && !safeExternalUrl(productUrl)) { setModalError("Use a valid HTTPS product URL."); setModalBusy(false); return; }
     if (productUrl && files.length > 1) { setModalError("Add a product link with one garment at a time, or leave it blank for a batch upload."); setModalBusy(false); return; }
@@ -498,6 +499,20 @@ export function LookuApp() {
     }
     if (files.length === 1 && !enteredName) { setModalError("Give this garment a name, or select several photos to use their file names as starting labels."); setModalBusy(false); return; }
     const supabase = createClient();
+    if (!files.length && productUrl) {
+      const { error } = await supabase.from("wardrobe_items").insert({
+        user_id: user.id, name: enteredName.slice(0,100), category: fallbackCategory,
+        brand: brand || null, colors: enteredColor ? [enteredColor] : [],
+        formality, seasons: [], style_tags: [], status: "available", is_owned: true, image_path: null,
+        attributes: { productUrl, source: "manual_product_link", photo_pending: true, user_confirmed_ownership: true },
+      });
+      if (error) { setModalError(error.message); setModalBusy(false); return; }
+      await loadData(user.id);
+      setModal(null); setScreen("Closet");
+      showToast("Added from your product link. You can add a photo or correct details later.");
+      setModalBusy(false);
+      return;
+    }
     let added = 0, untagged = 0;
     for (let index = 0; index < files.length; index++) {
       const file = files[index];
@@ -780,14 +795,14 @@ export function LookuApp() {
       title = "Add to your wardrobe";
       content = <form onSubmit={submitGarment}>
         <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 17 }}>Select multiple gallery photos in one batch; AI can suggest attributes for each. Or skip photos entirely using Quick Closet. Your uploaded images stay private.</p>
-        <div className="field"><span>Garment photographs</span><div className="upload-box"><Camera/><strong style={{ display: "block", fontSize: 12 }}>Choose one or several photos</strong><small>JPG, PNG or WebP · Up to 10 MB each · 12 per batch</small><input id="garment-photo" type="file" name="image" accept="image/jpeg,image/png,image/webp" multiple required/><label htmlFor="garment-photo" className="button compact" style={{ marginTop: 12 }}>Browse photos</label></div></div>
+        <div className="field"><span>Garment photographs</span><div className="upload-box"><Camera/><strong style={{ display: "block", fontSize: 12 }}>Choose one or several photos</strong><small>Optional if you add a product link · JPG, PNG or WebP · 12 per batch</small><input id="garment-photo" type="file" name="image" accept="image/jpeg,image/png,image/webp" multiple/><label htmlFor="garment-photo" className="button compact" style={{ marginTop: 12 }}>Browse photos</label></div></div>
         <label className="field">Item name <small>Required for one photo; batch uploads start with each file name</small><input className="input" name="name" maxLength={100} placeholder="e.g. Blue linen shirt"/></label>
         <div className="twocol">
           <label className="field">Category<select className="input" name="category" defaultValue="Tops">{categories.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}</select></label>
           <label className="field">Main color<input className="input" name="color" placeholder="e.g. navy blue"/></label>
         </div>
         <label className="field">Brand (optional)<input className="input" name="brand" maxLength={120} placeholder="Brand or maker"/></label>
-        <label className="field">Original product page (optional)<small>For a garment you own; this saves a link but does not import retailer data.</small><input className="input" name="product_url" type="url" placeholder="https://…"/></label>
+        <label className="field">Original product page (optional)<small>If you own the garment, you can add it using only its product URL and a name. LOOKU does not copy retailer photography without permission.</small><input className="input" name="product_url" type="url" placeholder="https://…"/></label>
         <label className="field">Formality · <span className="muted">1 casual to 10 formal</span><input className="input" type="range" name="formality" min="1" max="10" defaultValue="5" style={{ padding: "7px 0", border: 0, boxShadow: "none" }}/></label>
         {modalError && <ErrorNotice>{modalError}</ErrorNotice>}
         <div className="modal-actions"><button type="button" className="button" onClick={close} disabled={modalBusy}>Cancel</button><button type="submit" className="button primary" disabled={modalBusy}>{modalBusy?<><LoaderCircle className="spin-icon" size={15}/> Saving…</>:<><Upload size={15}/>Save garment</>}</button></div>
