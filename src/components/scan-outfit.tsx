@@ -19,29 +19,36 @@ export function ScanOutfit({userId,onImported,onClose}:{userId:string;onImported
     const url=URL.createObjectURL(photo);setPreview(url);
     return ()=>URL.revokeObjectURL(url);
   },[photo]);
+  async function compactScanImage(file:File): Promise<File> {
+    const bitmap = await createImageBitmap(file);
+    const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext("2d");
+    if(!ctx){bitmap.close();throw new Error("Image processing is not supported on this device.");}
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",0.78));
+    if(!blob||blob.size>3_500_000)throw new Error("Unable to compress the photo below 3.5 MB. Try a smaller picture.");
+    return new File([blob],"looku-outfit-scan.jpg",{type:"image/jpeg"});
+  }
   async function scan(e:FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if(!photo||!consent||busy)return;
     setBusy(true);setError("");setMessage("");setPieces([]);
-    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>10*1024*1024){
-      setError("Select a JPG, PNG or WebP photo smaller than 10 MB.");setBusy(false);return;
-    }
-    const supabase=createClient();
-    const filePath=userId+"/outfit-scan/"+crypto.randomUUID()+"-"+photo.name.toLowerCase().replace(/[^a-z0-9._-]/g,"-").slice(-75);
     try {
-      const {error:uploadError}=await supabase.storage.from("wardrobe-private").upload(filePath,photo,{contentType:photo.type,cacheControl:"3600",upsert:false});
-      if(uploadError)throw uploadError;
-      const response=await fetch("/api/ai/analyze-outfit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imagePath:filePath})});
+      if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>10*1024*1024)throw new Error("Choose a JPG, PNG or WebP photo smaller than 10 MB.");
+      const compact=await compactScanImage(photo);
+      const formData=new FormData();
+      formData.append("photo",compact);
+      const response=await fetch("/api/ai/analyze-outfit",{method:"POST",body:formData,cache:"no-store"});
       const data=await response.json() as Scan & {error?:string};
       if(!response.ok)throw new Error(data.error||"Could not scan that outfit.");
       if(!Array.isArray(data.pieces)||!data.pieces.length)throw new Error("No clear garments detected. Use Quick Closet or try another photo.");
       setPieces(data.pieces.slice(0,8).map(piece=>({...piece,selected:false})));
-      setMessage("Detected "+data.pieces.length+" possible pieces. Review names, colours and categories, then tick only the garments you own.");
-    } catch(e){setError(e instanceof Error?e.message:"Could not scan this outfit.");}
-    finally{
-      await supabase.storage.from("wardrobe-private").remove([filePath]).catch(()=>undefined);
-      setBusy(false);
-    }
+      setMessage("Detected "+data.pieces.length+" possible pieces. Review them and tick only the garments you own. LOOKU did not store the scan photo.");
+    }catch(e){setError(e instanceof Error?e.message:"Could not scan this outfit. Quick Closet works without AI.");}
+    finally{setBusy(false);}
   }
   async function savePieces(){
     if(busy)return;
@@ -70,7 +77,7 @@ export function ScanOutfit({userId,onImported,onClose}:{userId:string;onImported
       <label className="field" style={{marginTop:15}}>One outfit photo
         <input className="input" type="file" accept="image/jpeg,image/png,image/webp" required onChange={e=>{setPhoto(e.target.files?.[0]||null);setPieces([]);setError("");}}/>
       </label>
-      <label className="row" style={{justifyContent:"start",marginTop:14}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span className="small">I agree to send this photo to the configured image analysis provider. LOOKU deletes the temporary upload after processing.</span></label>
+      <label className="row" style={{justifyContent:"start",marginTop:14}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span className="small">I agree to send a resized copy of this image to the configured AI provider. LOOKU processes the request in memory without saving the scan photo.</span></label>
       <button className="button primary" type="submit" disabled={!photo||!consent||busy} style={{marginTop:14}}>{busy?<LoaderCircle size={14}/>:<Scan size={14}/>} {busy?"Analyzing…":"Identify clothes in this photo"}</button>
     </form>
     {message&&<div className="privacy-banner" role="status" style={{marginTop:14}}><ShieldCheck size={16}/>{message}</div>}
