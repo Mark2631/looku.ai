@@ -351,6 +351,29 @@ export function LookuApp() {
     showToast("Logged as worn. Your style history is updated.");
   }
 
+  async function shareLook(outfit: Outfit) {
+    const shareText = "LOOKU style check: " + outfit.title + " · " + outfit.occasion + ". What do you think? #LOOKU";
+    try {
+      if (outfit.cover_url) {
+        const response = await fetch(outfit.cover_url);
+        if (response.ok) {
+          const image = await response.blob();
+          const file = new File([image], "looku-look." + (image.type === "image/png" ? "png" : "jpg"), { type: image.type || "image/jpeg" });
+          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+            await navigator.share({ text: shareText, files: [file] });
+            return;
+          }
+        }
+      }
+      if (navigator.share) { await navigator.share({ text: shareText }); return; }
+      await navigator.clipboard.writeText(shareText);
+      showToast("Your look description was copied. Paste it into your favorite social app.");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      showToast("Sharing isn't supported here. You can still download and share your photo from your device.");
+    }
+  }
+
   async function reactToOutfit(outfit: Outfit, reaction: "like" | "dislike") {
     if (!user) return;
     const { error } = await createClient().from("outfit_feedback").insert({ user_id: user.id, outfit_id: outfit.id, reaction });
@@ -948,7 +971,7 @@ export function LookuApp() {
     return <>
       <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">A PRIVATE RECORD OF YOUR STYLE</span><h1 className="page-title serif">Your lookbook.</h1><p className="page-subtitle">Saved combinations, outfits you wore and moments you want to remember. Nothing is public unless you choose to share it in a future community feature.</p></div><button className="button primary" onClick={()=>openModal("look")}><Plus size={15}/>Record a look</button></div>
       <div className="filter-row section"><button className="filter-pill active">All looks · {savedLooks.length}</button><span className="badge neutral"><LockKeyhole size={12}/>Private by default</span></div>
-      {savedLooks.length ? <div className="look-grid">{savedLooks.map(outfit=>{const pieces=outfitItems(outfit);return <article className="look-card" key={outfit.id}><img src={outfit.cover_url||pieces.find(i=>i.image_url)?.image_url||heroImage} alt={outfit.title} loading="lazy"/><div className="look-info"><div className="row"><span className="badge neutral">{outfit.status==="worn"?"WORN":outfit.status==="planned"?"PLANNED":"SAVED"}</span><button className="icon-button" style={{width:30,height:30}} onClick={()=>void deleteOutfit(outfit)} aria-label="Delete look"><Trash2 size={13}/></button></div><strong style={{display:"block",marginTop:11}}>{outfit.title}</strong><p>{outfit.occasion} · {formatDate(outfit.worn_at||outfit.created_at)}</p>{pieces.length>0&&<p>{pieces.map(x=>x.name).join(" · ")}</p>}<div className="tool-row" style={{marginTop:12}}>{outfit.status!=="worn"&&<button className="button compact" onClick={()=>void markWorn(outfit)}><Check size={13}/>Wore this</button>}<button className="button compact" onClick={()=>void reactToOutfit(outfit,"like")} aria-label="Like look"><ThumbsUp size={13}/></button><button className="button compact" onClick={()=>{switchScreen("TryOn");showToast("Choose a photographed garment for a single-piece virtual try-on.");}}><Camera size={13}/>Preview on me</button><button className="button compact" onClick={()=>void reactToOutfit(outfit,"dislike")} aria-label="Dislike look"><ThumbsDown size={13}/></button></div></div></article>})}</div> : <EmptyState icon={ImagePlus} title="Keep the looks you love." body="Save an AI-generated outfit or upload a real outfit photo. Over time this becomes a useful record of combinations you can repeat." action="Record a look" onAction={()=>openModal("look")}/>}
+      {savedLooks.length ? <div className="look-grid">{savedLooks.map(outfit=>{const pieces=outfitItems(outfit);return <article className="look-card" key={outfit.id}><img src={outfit.cover_url||pieces.find(i=>i.image_url)?.image_url||heroImage} alt={outfit.title} loading="lazy"/><div className="look-info"><div className="row"><span className="badge neutral">{outfit.status==="worn"?"WORN":outfit.status==="planned"?"PLANNED":"SAVED"}</span><button className="icon-button" style={{width:30,height:30}} onClick={()=>void deleteOutfit(outfit)} aria-label="Delete look"><Trash2 size={13}/></button></div><strong style={{display:"block",marginTop:11}}>{outfit.title}</strong><p>{outfit.occasion} · {formatDate(outfit.worn_at||outfit.created_at)}</p>{pieces.length>0&&<p>{pieces.map(x=>x.name).join(" · ")}</p>}<div className="tool-row" style={{marginTop:12}}>{outfit.status!=="worn"&&<button className="button compact" onClick={()=>void markWorn(outfit)}><Check size={13}/>Wore this</button>}<button className="button compact" onClick={()=>void reactToOutfit(outfit,"like")} aria-label="Like look"><ThumbsUp size={13}/></button><button className="button compact" onClick={()=>void shareLook(outfit)} aria-label={"Share "+outfit.title}><ArrowUpRight size={13}/>Share</button><button className="button compact" onClick={()=>{switchScreen("TryOn");showToast("Choose a photographed garment for a single-piece virtual try-on.");}}><Camera size={13}/>Preview on me</button><button className="button compact" onClick={()=>void reactToOutfit(outfit,"dislike")} aria-label="Dislike look"><ThumbsDown size={13}/></button></div></div></article>})}</div> : <EmptyState icon={ImagePlus} title="Keep the looks you love." body="Save an AI-generated outfit or upload a real outfit photo. Over time this becomes a useful record of combinations you can repeat." action="Record a look" onAction={()=>openModal("look")}/>}
       <section className="section"><div className="section-head"><div><span className="eyebrow">THE IDEAS YOU'RE CONSIDERING</span><h2 className="section-title">Wishlist</h2><p className="section-note">Saved product links aren't owned clothing and won't be used in outfit generation.</p></div><button className="button compact" onClick={()=>openModal("wish")}><Plus size={13}/>Add idea</button></div>
       {wishlist.length ? <div className="stack">{wishlist.map(w=><div className="surface row" key={w.id}><div style={{minWidth:0}}><strong style={{fontSize:13}}>{w.title}</strong><p className="small muted" style={{margin:"5px 0 0"}}>{w.note||"Personal shopping idea"}{w.product_url&&safeHostname(w.product_url)?" · "+safeHostname(w.product_url):""}</p>{w.product_url&&safeExternalUrl(w.product_url)&&<a className="text-action" href={safeExternalUrl(w.product_url)||undefined} target="_blank" rel="noreferrer">Open retailer <ExternalLink size={11} style={{display:"inline"}}/></a>}</div><button className="icon-button" onClick={()=>void deleteWish(w)} aria-label="Remove wishlist idea"><Trash2 size={14}/></button></div>)}</div> : <div className="surface row"><div><strong style={{fontSize:12}}>Keep your future purchases intentional.</strong><p className="small muted" style={{margin:"5px 0 0"}}>Save a product URL and why it belongs in your wardrobe.</p></div><button className="button compact" onClick={()=>openModal("wish")}>Add wishlist idea</button></div>}
       </section>
