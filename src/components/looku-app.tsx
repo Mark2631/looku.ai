@@ -151,6 +151,12 @@ export function LookuApp() {
   const [currentTime, setCurrentTime] = useState(0);
   useEffect(() => { setCurrentTime(Date.now()); }, []);
   useEffect(() => { const saved = window.localStorage.getItem("looku-theme"); const next = saved === "light" ? "light" : "dark"; document.documentElement.dataset.lookuTheme = next; setTheme(next); }, []);
+  useEffect(() => {
+    const textarea = document.getElementById("looku-composer-input");
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    textarea.style.height = "40px";
+    textarea.style.height = Math.min(textarea.scrollHeight, 138) + "px";
+  }, [chatInput, screen]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarMessage, setCalendarMessage] = useState("");
   const [calendarCursor, setCalendarCursor] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -1044,7 +1050,7 @@ export function LookuApp() {
                 <div className="looku-card-actions">
                   <button className="looku-card-action" type="button" onClick={() => { void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }} aria-label={"Like " + idea.title} title="Like this look"><Heart size={14}/></button>
                   <button className="looku-card-action" type="button" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save this look"><Bookmark size={14}/></button>
-                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
+                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
                 </div>
                 {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
                   <button type="button" onClick={() => { setLookMenu(null); void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }}><Heart size={14}/>Like this look</button>
@@ -1352,7 +1358,7 @@ export function LookuApp() {
           <div className="looku-brand"><div className="wordmark">looku<span className="dot">.</span></div><div className="tagline">{screen === "Today" ? "YOUR PERSONAL STYLE ASSISTANT" : (currentNav?.label || "YOUR STYLE SPACE").toUpperCase()}</div></div>
         </div>
         <div className="topbar-right">
-          <button className="button primary compact looku-new-look-button" type="button" onClick={startNewLook}><Plus size={14}/>New Look</button>
+          <button className="button primary compact looku-new-look-button" type="button" onClick={startNewLook} aria-label="Start a new look" title="New Look"><Plus size={14}/>New Look</button>
           <button className="icon-button" type="button" onClick={() => switchScreen("Settings")} aria-label="Profile and preferences"><UserRound size={16}/></button>
         </div>
       </header>
@@ -1364,7 +1370,7 @@ export function LookuApp() {
     {(screen === "Today" || screen === "Stylist") && <div className="looku-composer-dock">
       <form className="looku-composer-form" onSubmit={sendChat}>
         <button className="looku-composer-tool" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }} aria-label="Add wardrobe photo" title="Add from a photo"><Plus size={20}/></button>
-        <textarea id="looku-composer-input" className="looku-composer-input" rows={1} maxLength={1000} value={chatInput} onChange={event => setChatInput(event.target.value)} placeholder="Describe the look you want…" aria-label="Describe the look you want"/>
+        <textarea id="looku-composer-input" className="looku-composer-input" rows={1} style={{ overflowY: chatInput.length > 180 ? "auto" : "hidden" }} maxLength={1000} value={chatInput} onChange={event => setChatInput(event.target.value)} placeholder="Describe the look you want…" aria-label="Describe the look you want"/>
         <div className="looku-composer-tools">
           <button className="looku-composer-tool" type="button" onClick={startVoiceInput} aria-label="Use voice input" title="Speak your prompt"><Mic size={18}/></button>
           <button className="looku-composer-send" type="submit" disabled={styling || !chatInput.trim()} aria-label="Create look" title="Create look">{styling ? <LoaderCircle size={17} className="spin-icon"/> : <ArrowRight size={18}/>}</button>
