@@ -8,7 +8,7 @@ import {
   CircleHelp, CloudSun, Heart, House, ImagePlus, Layers3, LogOut, Menu, MessageCircle, Plus, Search, Settings, Shirt,
   ShoppingBag, Sparkles, Star, Trash2, Upload, UserRound, X, Footprints, WandSparkles, RefreshCw, ThumbsDown,
   ThumbsUp, Bookmark, Clock3, CalendarCheck, Package, ShieldCheck, LockKeyhole, ExternalLink, Link as LinkIcon,
-  ListChecks, SlidersHorizontal, Camera, CircleAlert, LoaderCircle, Download, Store, Pencil, CalendarPlus, ShirtIcon
+  ListChecks, SlidersHorizontal, Camera, CircleAlert, LoaderCircle, Download, Store, Pencil, CalendarPlus, ShirtIcon, Users
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -16,11 +16,12 @@ import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
 import { QuickCloset } from "@/components/quick-closet";
+import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
 import { greetingForHour } from "@/lib/greeting";
 import { TryOnRoom } from "@/components/tryon-room";
 
-type Screen = "Today" | "Closet" | "Stylist" | "Occasion" | "TryOn" | "Plan" | "Looks" | "Shop" | "Insights" | "Settings";
+type Screen = "Today" | "Closet" | "Stylist" | "Occasion" | "TryOn" | "Plan" | "Looks" | "Community" | "Shop" | "Insights" | "Settings";
 type WardrobeItem = {
   id: string; user_id: string; name: string; brand: string | null; category: string; colors: string[]; pattern: string | null;
   formality: number; seasons: string[]; style_tags: string[]; image_path: string | null; image_url?: string | null;
@@ -51,6 +52,7 @@ const navItems: { id: Screen; label: string; icon: typeof House; group?: string 
   { id: "TryOn", label: "Virtual fitting room", icon: Camera },
   { id: "Plan", label: "Outfit planner", icon: CalendarDays },
   { id: "Looks", label: "My lookbook", icon: ImagePlus },
+  { id: "Community", label: "Style community", icon: Users },
   { id: "Shop", label: "Curated shop", icon: ShoppingBag, group: "DISCOVER" },
   { id: "Insights", label: "Style intelligence", icon: CircleHelp, group: "DISCOVER" },
   { id: "Settings", label: "Preferences", icon: Settings, group: "ACCOUNT" },
@@ -1083,6 +1085,8 @@ export function LookuApp() {
     return <TryOnRoom userId={user?.id || ""} items={items} configured={Boolean(integrationHealth?.tryOnConfigured)} />;
   }
 
+  function renderCommunity() { return user?.id ? <StyleCommunity userId={user.id} defaultName={profile.full_name || user.name}/> : null; }
+
   function renderSettings() {
     const prefs=profile.style_preferences||{};
     return <>
@@ -1116,7 +1120,7 @@ export function LookuApp() {
   const mobileItems: {id: Screen|"More"; label: string; icon: typeof House}[] = [
     {id:"Today",label:"Today",icon:House},{id:"Closet",label:"Closet",icon:Shirt},{id:"Stylist",label:"Stylist",icon:Sparkles},{id:"Plan",label:"Plan",icon:CalendarDays},{id:"More",label:"More",icon:Menu}
   ];
-  const content = screen==="Today" ? renderToday() : screen==="Closet" ? renderCloset() : screen==="Stylist" ? renderStylist() : screen==="Occasion" ? renderOccasionStudio() : screen==="TryOn" ? renderTryOn() : screen==="Plan" ? renderPlanner() : screen==="Looks" ? renderLooks() : screen==="Shop" ? renderShop() : screen==="Insights" ? renderInsights() : renderSettings();
+  const content = screen==="Today" ? renderToday() : screen==="Closet" ? renderCloset() : screen==="Stylist" ? renderStylist() : screen==="Occasion" ? renderOccasionStudio() : screen==="TryOn" ? renderTryOn() : screen==="Plan" ? renderPlanner() : screen==="Looks" ? renderLooks() : screen==="Community" ? renderCommunity() : screen==="Shop" ? renderShop() : screen==="Insights" ? renderInsights() : renderSettings();
 
   return <div className="app-shell">
     <aside className="sidebar"><div className="wordmark">looku<span className="dot">.</span></div><div className="tagline">YOUR STYLE, UNDERSTOOD.</div><nav className="side-nav">{navItems.map((n,i)=><div key={n.id}>{n.group&&<div className="eyebrow" style={{padding:"15px 12px 7px",marginTop:i===0?0:7}}>{n.group}</div>}<button className={"nav-link "+(screen===n.id?"active":"")} onClick={()=>switchScreen(n.id)}><n.icon size={17}/>{n.label}{n.id==="Closet"&&items.length>0&&<span style={{marginLeft:"auto",fontSize:10,color:"var(--muted)"}}>{items.length}</span>}</button></div>)}</nav><div className="side-bottom"><div className="surface soft" style={{padding:14,boxShadow:"none",marginBottom:16}}><Sparkles size={17} color="#526349"/><p style={{fontSize:12,lineHeight:1.55,margin:"10px 0 12px"}}>Small wardrobe. More combinations. A style that feels like you.</p><button className="button compact" onClick={()=>{switchScreen("Stylist");}}>Style something <ArrowUpRight size={12}/></button></div><div className="profile-chip"><div className="avatar">{getInitials(profile.full_name||user.name)}</div><div style={{flex:1,minWidth:0}}><strong style={{display:"block",fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.full_name||user.name}</strong><span className="tiny muted">Personal wardrobe</span></div><button className="icon-button" onClick={()=>switchScreen("Settings")} aria-label="Account settings" style={{width:31,height:31}}><Settings size={14}/></button></div></div></aside>
@@ -1127,7 +1131,7 @@ export function LookuApp() {
       <footer className="section row" style={{borderTop:"1px solid var(--line)",paddingTop:20,alignItems:"start"}}><div><div className="wordmark" style={{fontSize:24}}>looku<span className="dot">.</span></div><p className="tiny muted" style={{lineHeight:1.7,marginTop:8}}>Thoughtfully dressed, every day.<br/>Wardrobe images stay private by default.</p></div><div className="tool-row"><button className="text-action" onClick={()=>switchScreen("Settings")}>Privacy & preferences</button><button className="text-action" onClick={()=>switchScreen("Shop")}>Retail partners</button></div></footer>
     </main>
     <nav className="bottom-nav" aria-label="Main navigation">{mobileItems.map(n=>{const Icon=n.icon;return <button key={n.id} className={(n.id==="More"?moreOpen:screen===n.id)?"active":""} onClick={()=>n.id==="More"?setMoreOpen(v=>!v):switchScreen(n.id as Screen)}><Icon/><span>{n.label}</span></button>})}</nav>
-    {moreOpen&&<div style={{position:"fixed",zIndex:45,bottom:75,right:12,background:"#fff",border:"1px solid var(--line)",borderRadius:16,padding:8,boxShadow:"0 15px 45px #0002",width:210}}>{([{id:"Occasion",label:"Occasion studio",icon:CalendarCheck},{id:"TryOn",label:"Virtual fitting room",icon:Camera},{id:"Looks",label:"My lookbook",icon:ImagePlus},{id:"Shop",label:"Curated shop",icon:ShoppingBag},{id:"Insights",label:"Style intelligence",icon:CircleHelp},{id:"Settings",label:"Preferences",icon:Settings}] as {id:Screen;label:string;icon:typeof House}[]).map(n=><button key={n.id} className="nav-link" onClick={()=>switchScreen(n.id)}><n.icon size={16}/>{n.label}</button>)}<button className="nav-link" onClick={()=>void signOut()}><LogOut size={16}/>Sign out</button></div>}
+    {moreOpen&&<div style={{position:"fixed",zIndex:45,bottom:75,right:12,background:"#fff",border:"1px solid var(--line)",borderRadius:16,padding:8,boxShadow:"0 15px 45px #0002",width:210}}>{([{id:"Occasion",label:"Occasion studio",icon:CalendarCheck},{id:"TryOn",label:"Virtual fitting room",icon:Camera},{id:"Looks",label:"My lookbook",icon:ImagePlus},{id:"Community",label:"Style community",icon:Users},{id:"Shop",label:"Curated shop",icon:ShoppingBag},{id:"Insights",label:"Style intelligence",icon:CircleHelp},{id:"Settings",label:"Preferences",icon:Settings}] as {id:Screen;label:string;icon:typeof House}[]).map(n=><button key={n.id} className="nav-link" onClick={()=>switchScreen(n.id)}><n.icon size={16}/>{n.label}</button>)}<button className="nav-link" onClick={()=>void signOut()}><LogOut size={16}/>Sign out</button></div>}
     {renderModal()}
     {toastMessage&&<div className="toast" role="status">{toastMessage}</div>}
   </div>;
