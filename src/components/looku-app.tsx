@@ -281,7 +281,7 @@ export function LookuApp() {
   const styleName = String(profile.style_preferences?.style || "Relaxed minimal");
   const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
   const [localHour,setLocalHour] = useState<number | null>(null);
-  useEffect(() => { const update=()=>setLocalHour(new Date().getHours()); update(); const clock=window.setInterval(update,60000); return ()=>window.clearInterval(clock); }, []);
+  useEffect(() => { const update=()=>setLocalHour(new Date().getHours()); update(); const onVisible=()=>{if(document.visibilityState==="visible")update();}; document.addEventListener("visibilitychange",onVisible); window.addEventListener("focus",update); const clock=window.setInterval(update,60000); return ()=>{window.clearInterval(clock);window.removeEventListener("focus",update);document.removeEventListener("visibilitychange",onVisible);}; }, []);
   const timeGreeting = localHour === null ? "Hello" : localHour < 12 ? "Good morning" : localHour < 17 ? "Good afternoon" : "Good evening";
 
 
@@ -701,6 +701,18 @@ export function LookuApp() {
     showToast("Piece replaced. The rest of the look stayed in place.");
   }
 
+  async function shareOutfitIdea(idea: OutfitIdea) {
+    const labels = items.filter(item => idea.itemIds.includes(item.id)).map(item => item.name);
+    const shareText = [idea.title, labels.join(" + "), idea.reason, "Styled with LOOKU · https://looku-ai-mvp.vercel.app/"].filter(Boolean).join("\n\n");
+    try {
+      if (navigator.share) await navigator.share({title: "My LOOKU outfit: " + idea.title, text: shareText});
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(shareText); showToast("Outfit idea copied. Share it wherever you like."); }
+      else showToast("Sharing isn't supported in this browser.");
+    } catch (e) {
+      if (e instanceof Error && e.name !== "AbortError") showToast("Unable to share. You can still save the look privately.");
+    }
+  }
+
   function renderOutfitIdea(idea: OutfitIdea, index: number) {
     const pieces = outfitItems(idea);
     return <article className="surface" key={idea.title + index} style={{ padding: 16 }}>
@@ -710,8 +722,10 @@ export function LookuApp() {
       </div>
       <div className="outfit-composition">{pieces.map(item => <div className="piece-card" key={item.id}><img src={item.image_url || ""} alt={item.name} loading="lazy"/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category} · {(item.colors || []).slice(0,2).join(", ") || "Color not set"}</span><select aria-label={"Replace "+item.name} className="input" value={item.id} onChange={e=>replaceGeneratedPiece(index,item.id,e.target.value)} style={{padding:"7px",fontSize:10,marginTop:8}}>{availableItems.filter(candidate=>candidate.category===item.category&&(candidate.id===item.id||!idea.itemIds.includes(candidate.id))).map(candidate=><option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></div></div>)}</div>
       {idea.confidenceNote && <p className="tiny muted" style={{ margin: "12px 0 0" }}>{idea.confidenceNote}</p>}
+      <p className="tiny muted" style={{margin:"9px 0 0"}}>Sharing is optional. Only outfit names and styling text are shared; your wardrobe photos and account stay private.</p>
       <div className="tool-row" style={{ marginTop: 14 }}>
         <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button>
+        <button className="button compact" onClick={() => void shareOutfitIdea(idea)}><ExternalLink size={14}/>Share outfit idea</button>
         <button className="button compact" onClick={() => { setMood("Keep the idea but make it more relaxed."); void generateLooks("Keep the idea but make it more relaxed.", occasion); }}>More relaxed</button>
         <button className="button compact" onClick={() => { setMood("Keep the general style but make it more formal."); void generateLooks("Keep the general style but make it more formal.", occasion); }}>More formal</button>
       </div>
