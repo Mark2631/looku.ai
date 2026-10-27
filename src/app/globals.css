@@ -29,3 +29,18 @@
 .looku-jumpstart>button>svg{flex-shrink:0;color:var(--muted)}
 @media(max-width:950px){.looku-jumpstart{grid-template-columns:1fr}.looku-jumpstart>button{padding:13px 15px}}
 @media(max-width:780px){.hero-personal{margin-top:14px}.hero-copy .page-title{font-size:clamp(37px,10vw,49px);line-height:1.04}.hero-visual{min-height:340px}.hero-visual-label{left:18px;right:18px;bottom:18px}.hero-trust{gap:12px}.looku-jumpstart{margin-top:14px;gap:8px}.hero-copy .hero-actions{gap:8px}.hero-copy .hero-actions .button{min-height:44px}.hero-copy .hero-actions .button.primary{flex:1}}
+
+/* Occasion prompts: compact, editorial, easy to tap on mobile. */
+.moment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.moment-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;min-height:148px;border:1px solid var(--line);border-radius:18px;padding:19px;background:linear-gradient(145deg,#fff,#f0ede5);color:var(--ink);transition:transform .15s,border-color .15s}
+.moment-card:hover{transform:translateY(-2px);border-color:var(--sage)}
+.moment-card strong{font:400 23px Georgia,serif;line-height:1.12;letter-spacing:-.035em}
+.moment-card small{font-size:11px;color:var(--muted);padding-right:21px;line-height:1.45}
+.moment-arrow{position:absolute;right:15px;bottom:15px;color:var(--sage-dark)}
+.capture-surface{background:linear-gradient(145deg,#fff,#f6f4ee)}
+.capture-options{display:flex;align-items:center;flex-wrap:wrap;gap:13px;margin:19px 0 20px}
+.capture-confirm{display:flex;align-items:flex-start;gap:9px;font-size:11px;line-height:1.55;margin:12px 0 15px;color:var(--muted)}
+.capture-confirm input{margin-top:3px}
+.capture-preview{display:grid;gap:9px;margin:13px 0}
+.shopping-journal .surface{box-shadow:none}
+@media(max-width:780px){.moment-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.moment-card{min-height:135px;padding:15px}.moment-card strong{font-size:20px}}
