@@ -6,13 +6,13 @@ import { decryptCalendarToken } from "@/lib/calendar-crypto";
 
 export const runtime = "nodejs";
 
-async function listAllObjectPaths(client: SupabaseClient<any, any, any>, basePath: string): Promise<string[]> {
+async function listAllObjectPaths(client: SupabaseClient<any, any, any>, bucket: string, basePath: string): Promise<string[]> {
   const found: string[] = [];
   async function walk(path: string): Promise<void> {
     let offset = 0;
     while (true) {
-      const { data, error } = await client.storage.from("wardrobe-private").list(path, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
-      if (error) throw new Error("Could not enumerate private wardrobe files for deletion.");
+      const { data, error } = await client.storage.from(bucket).list(path, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
+      if (error) throw new Error("Could not enumerate account files in " + bucket + " for deletion.");
       const entries = data || [];
       for (const entry of entries) {
         const next = path ? path + "/" + entry.name : entry.name;
@@ -52,10 +52,14 @@ export async function POST(request: NextRequest) {
         await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(refreshToken), { method: "POST", signal: AbortSignal.timeout(4000) }).catch(() => undefined);
       } catch { /* Continue deleting local data; Google access can be revoked in Google Account security if provider revocation fails. */ }
     }
-    const paths = await listAllObjectPaths(admin, user.id);
-    for (let i = 0; i < paths.length; i += 100) {
-      const { error } = await admin.storage.from("wardrobe-private").remove(paths.slice(i, i + 100));
-      if (error) throw new Error("Could not remove every private photo. Account records have not been deleted; retry after resolving storage access.");
+    // Delete public community media as well as private closet images before removing the account.
+    // Public uploads are explicit and live in a separate bucket, so cascade-delete alone is insufficient.
+    for (const bucket of ["looku-community", "wardrobe-private"]) {
+      const paths = await listAllObjectPaths(admin, bucket, user.id);
+      for (let i = 0; i < paths.length; i += 100) {
+        const { error } = await admin.storage.from(bucket).remove(paths.slice(i, i + 100));
+        if (error) throw new Error("Could not remove all account photos from " + bucket + ". Account deletion was stopped; contact support.");
+      }
     }
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) throw new Error("Private photos were cleared, but account removal failed. Please contact support before retrying.");
