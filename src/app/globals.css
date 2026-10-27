@@ -88,7 +88,7 @@
 .looku-card-actions{display:flex;gap:5px;align-items:center;margin-top:9px}
 .looku-card-action{display:inline-grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--muted)}
 .looku-card-action:hover,.looku-card-action.active{background:var(--oat);color:var(--ink)}
-.looku-action-menu{position:absolute;z-index:25;right:8px;bottom:43px;display:grid;gap:3px;min-width:174px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.looku-action-menu{position:fixed;z-index:120;top:auto;left:auto;right:auto;bottom:auto;display:grid;gap:3px;width:min(190px,calc(100vw - 20px));min-width:174px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
 .looku-action-menu button{display:flex;align-items:center;gap:9px;text-align:left;padding:9px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:11px}
 .looku-action-menu button:hover{background:var(--oat)}
 .looku-product-tile{flex:0 0 160px;min-width:0;border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--white);scroll-snap-align:start}
