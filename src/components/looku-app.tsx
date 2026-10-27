@@ -16,6 +16,7 @@ import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
 import { QuickCloset } from "@/components/quick-closet";
+import { ScanOutfit } from "@/components/scan-outfit";
 import { greetingForHour } from "@/lib/greeting";
 import { TryOnRoom } from "@/components/tryon-room";
 
@@ -94,6 +95,7 @@ export function LookuApp() {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string; name: string } | null>(null);
   const [screen, setScreen] = useState<Screen>("Today");
+  const [showOutfitScanner, setShowOutfitScanner] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [items, setItems] = useState<WardrobeItem[]>([]);
@@ -940,6 +942,9 @@ export function LookuApp() {
     return <>
       <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">THE PIECES THAT MAKE YOU, YOU</span><h1 className="page-title serif">My closet.</h1><p className="page-subtitle">{items.length} pieces in your collection · {availableItems.length} ready to wear. Tap a few essentials you own, add a batch of photos, or edit pieces as you go. You don't need to photograph your whole wardrobe.</p></div><button className="button primary" onClick={() => openModal("garment")}><Plus size={15}/>Add clothes</button></div>
       {user && <QuickCloset userId={user?.id || ""} existing={items} onImported={async()=>{if(user?.id) await loadData(user.id);showToast("Your quick closet is ready to style.");}} onPhotoUpload={()=>openModal("garment")}/> }
+      <div className="tool-row section"><button className="button" onClick={()=>setShowOutfitScanner(open=>!open)}><Camera size={14}/>{showOutfitScanner?"Close outfit scan":"Scan several pieces from one outfit photo"}</button></div>
+      {user && showOutfitScanner && <ScanOutfit userId={user.id} onImported={async()=>{await loadData(user.id);showToast("Confirmed garments added from your outfit photo.");}} onClose={()=>setShowOutfitScanner(false)}/>}
+
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Wardrobe pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Clothing you own</span></div><div className="stat"><span className="stat-label">Ready to wear</span><div className="stat-number">{availableItems.length}</div><span className="stat-caption">Available for styling</span></div><div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Your personal outfit history</span></div></div>
       <div className="tool-row section" style={{ marginTop: 26 }}><div className="search-wrap"><Search/><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, brand or color…" aria-label="Search wardrobe"/></div><button className="button" onClick={() => setFilter(filter==="All"?"Tops":"All")}><SlidersHorizontal size={14}/>{filter==="All"?"Filter":"Clear filter"}</button></div>
       <div className="filter-row">{categories.map(cat=><button key={cat} className={"filter-pill "+(filter===cat?"active":"")} onClick={()=>setFilter(cat)}>{cat}{cat==="All"?" ("+items.length+")":""}</button>)}</div>
