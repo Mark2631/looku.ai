@@ -40,6 +40,9 @@ export function matchWardrobeOutfits(
   occasion: string,
   count = 3,
   avoidIds: string[] = [],
+  likedIds: string[] = [],
+  dislikedIds: string[] = [],
+  avoidedColors: string[] = [],
 ): MatchLook[] {
   const items = wardrobe.filter(i => i.is_owned !== false && (!i.status || i.status === "available"));
   const category = (name: string) => items.filter(i => i.category === name);
@@ -63,7 +66,10 @@ export function matchWardrobeOutfits(
       if (ids.length < 2) continue;
       const score = selected.reduce((total, item) =>
         total - Math.abs((item.formality ?? 5) - required) * 0.6
-        - (avoidIds.includes(item.id) ? 2.5 : 0), 0)
+        - (avoidIds.includes(item.id) ? 2.5 : 0)
+        + (likedIds.includes(item.id) ? 1.2 : 0)
+        - (dislikedIds.includes(item.id) ? 1.0 : 0)
+        - ((item.colors || []).some(c => avoidedColors.some(avoid => c.toLowerCase().includes(avoid.toLowerCase()))) ? 5 : 0), 0)
         + (base.length > 1 ? colorBalance(base[0], base[1]) : 0)
         + (shoe ? 2 : 0);
       candidates.push({ pieces: selected, score });
