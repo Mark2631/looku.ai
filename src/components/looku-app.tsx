@@ -424,6 +424,8 @@ export function LookuApp() {
       if (itemError) { await supabase.from("outfits").delete().eq("id", outfit.id).eq("user_id", user.id); throw itemError; }
       if (alsoLike) { await supabase.from("outfit_feedback").insert({ user_id: user.id, outfit_id: outfit.id, reaction: "like" }); }
       await loadData(user.id);
+      setGenerated(previous => previous.filter(candidate => candidate !== idea));
+      setLookMenu(null);
       setModal(null);
       showToast("Saved to your lookbook.");
     } catch (error) { showToast(error instanceof Error ? error.message : "Couldn't save this outfit."); }
