@@ -409,7 +409,7 @@ export function LookuApp() {
   }
 
   async function saveOutfit(idea: OutfitIdea, selectedOccasion = occasion, alsoLike = false) {
-    if (!user) return;
+    if (!user || modalBusy) return;
     const validItems = idea.itemIds.filter(id => availableItems.some(item => item.id === id));
     if (validItems.length < 2) { showToast("Those pieces are no longer all available. Generate a fresh look."); return; }
     setModalBusy(true);
@@ -465,9 +465,21 @@ export function LookuApp() {
 
   async function reactToOutfit(outfit: Outfit, reaction: "like" | "dislike") {
     if (!user) return;
-    const { error } = await createClient().from("outfit_feedback").insert({ user_id: user.id, outfit_id: outfit.id, reaction });
-    if (error) showToast("Feedback couldn't be saved.");
-    else { if (reaction === "like") setLikedOutfitIds(previous => previous.includes(outfit.id) ? previous : [outfit.id, ...previous]); showToast(reaction === "like" ? "Noted. I'll favor looks like this." : "Noted. I'll avoid leaning this way."); }
+    const client = createClient();
+    const alreadyLiked = reaction === "like" && likedOutfitIds.includes(outfit.id);
+    const result = alreadyLiked
+      ? await client.from("outfit_feedback").delete().eq("user_id", user.id).eq("outfit_id", outfit.id).eq("reaction", "like")
+      : await client.from("outfit_feedback").insert({ user_id: user.id, outfit_id: outfit.id, reaction });
+    if (result.error) {
+      showToast("Feedback couldn't be saved.");
+      return;
+    }
+    if (reaction === "like") {
+      setLikedOutfitIds(previous => alreadyLiked ? previous.filter(id => id !== outfit.id) : previous.includes(outfit.id) ? previous : [outfit.id, ...previous]);
+      showToast(alreadyLiked ? "Removed from liked looks." : "Saved to liked looks.");
+    } else {
+      showToast("Noted. I'll avoid leaning this way.");
+    }
   }
 
   async function deleteOutfit(outfit: Outfit) {
@@ -1073,7 +1085,7 @@ export function LookuApp() {
           return <article className="looku-look-tile" key={outfit.id}>
             <button type="button" className="looku-look-visual" onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt={outfit.title}/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Look memory</span></div>}</button>
             <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{formatDate(outfit.worn_at || outfit.created_at)} · {outfit.occasion}</p>
-              <div className="looku-card-actions"><button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button><button className="looku-card-action" type="button" onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button><button className="looku-card-action" type="button" onClick={() => switchScreen("Looks")} aria-label="More memory actions" title="More actions"><MoreHorizontal size={16}/></button></div>
+              <div className="looku-card-actions"><button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button><button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button><button className="looku-card-action" type="button" onClick={() => switchScreen("Looks")} aria-label="More memory actions" title="More actions"><MoreHorizontal size={16}/></button></div>
             </div>
           </article>;
         })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Your style memories will build as you go.</strong>Save a look you love or record an outfit you actually wore.</div><button className="button compact" type="button" onClick={() => openModal("look")}><Plus size={13}/>Record a look</button></div>}
@@ -1154,7 +1166,7 @@ export function LookuApp() {
           return <article className="looku-look-tile" key={idea.title + index}>
             <div className="looku-look-visual"><div className="looku-piece-mosaic">{pieces.slice(0, 4).map(piece => piece.image_url ? <img key={piece.id} src={piece.image_url} alt={piece.name}/> : <div key={piece.id} className="looku-piece-placeholder"><Shirt size={20}/></div>)}</div></div>
             <div className="looku-look-details"><strong>{idea.title}</strong><p>{idea.style}</p><p style={{ whiteSpace: "normal", maxHeight: "4.5em" }}>{idea.reason}</p>
-              <div className="looku-card-actions"><button type="button" className="looku-card-action" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save look"><Bookmark size={14}/></button><button type="button" className="looku-card-action" onClick={() => { setChatInput("Create a variation of " + idea.title + " while keeping the pieces that work."); document.getElementById("looku-composer-input")?.focus(); }} aria-label={"Create variation of " + idea.title} title="Create variation"><WandSparkles size={14}/></button><button type="button" className="looku-card-action" onClick={() => void shareOutfitIdea(idea)} aria-label={"Share " + idea.title} title="Share look"><ArrowUpRight size={14}/></button></div>
+              <div className="looku-card-actions"><button type="button" className="looku-card-action" disabled={modalBusy} onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save look"><Bookmark size={14}/></button><button type="button" className="looku-card-action" onClick={() => { setChatInput("Create a variation of " + idea.title + " while keeping the pieces that work."); document.getElementById("looku-composer-input")?.focus(); }} aria-label={"Create variation of " + idea.title} title="Create variation"><WandSparkles size={14}/></button><button type="button" className="looku-card-action" onClick={() => void shareOutfitIdea(idea)} aria-label={"Share " + idea.title} title="Share look"><ArrowUpRight size={14}/></button></div>
             </div>
           </article>;
         })}</div>
