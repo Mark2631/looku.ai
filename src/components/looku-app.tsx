@@ -1197,6 +1197,108 @@ export function LookuApp() {
     </div>;
   }
 
+  function renderPlanner() {
+    const start = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1);
+    const first = new Date(start.getFullYear(), start.getMonth(), 1).getDay();
+    const daysInMonth = new Date(start.getFullYear(), start.getMonth()+1, 0).getDate();
+    const monthLabel = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    return <>
+      <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">MAKE ROOM FOR YOUR DAY</span><h1 className="page-title serif">Plan your looks.</h1><p className="page-subtitle">Schedule outfits around real events. Calendar integration can be enabled later with explicit read-only permission.</p></div><button className="button primary" onClick={()=>openModal("plan")}><Plus size={15}/>Plan an outfit</button></div>
+      <section className="surface section">
+        <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">OPTIONAL CALENDAR CONNECTION</span><h2 className="section-title">Bring your day into LOOKU.</h2><p className="section-note">Read-only Google Calendar access helps you spot upcoming occasions. LOOKU never edits or deletes your Google events.</p></div><CalendarDays size={25}/></div>
+        <div className="tool-row" style={{ marginTop: 16 }}>
+          {!calendarStatus.configured ? <button className="button primary" disabled title="Server configuration is required"><CalendarDays size={14}/>Connect Google Calendar</button>
+            : calendarStatus.connected ? <><span className="badge"><Check size={12}/>Connected{calendarStatus.accountEmail ? " · "+calendarStatus.accountEmail : ""}</span><button className="button compact" onClick={()=>void refreshCalendarEvents()} disabled={calendarLoading}>{calendarLoading?"Refreshing…":"Refresh events"}</button><button className="button compact" onClick={()=>void disconnectCalendar()}>Disconnect</button></>
+            : <a className="button primary" href="/api/calendar/connect"><CalendarDays size={14}/>Connect Google Calendar</a>}
+        </div>
+        {!calendarStatus.configured && <p className="tiny muted" style={{ lineHeight: 1.7, margin: "12px 0 0" }}>Provider setup is required before connecting: Google OAuth client credentials, a private token-encryption key and the LOOKU server database credentials. No calendar permission is requested until you start the connection.</p>}
+        {calendarMessage && <div style={{ marginTop: 12 }}><ErrorNotice>{calendarMessage}</ErrorNotice></div>}
+        {calendarLoading && <p className="small muted" style={{ marginTop: 14 }}><LoaderCircle size={14} className="spin-icon" style={{ display:"inline",verticalAlign:"middle",marginRight:6 }}/>Loading upcoming events…</p>}
+        {calendarStatus.connected && calendarEvents.length===0 && !calendarLoading && <p className="small muted" style={{ marginTop: 14 }}>No upcoming events were returned for the next 45 days.</p>}
+        {calendarEvents.length>0 && <div className="stack" style={{ marginTop: 15 }}>{calendarEvents.map(event=><div className="outfit-row" key={event.id}><div className="avatar"><CalendarDays size={15}/></div><div style={{ minWidth:0, flex:1 }}><strong>{event.title}</strong><small>{formatDate(event.start.slice(0,10))}{event.start.includes("T")?" · "+new Date(event.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):" · All day"}{event.location?" · "+event.location:""}</small></div><button className="button compact" onClick={()=>void importCalendarEvent(event)} disabled={plans.some(p=>p.external_event_id===event.id)}>{plans.some(p=>p.external_event_id===event.id)?"Added":"Add to LOOKU"}</button></div>)}</div>}
+      </section>
+      <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
+      <section className="surface section"><div className="calendar-header"><button className="icon-button" aria-label="Previous month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()-1,1))}><ChevronLeft size={16}/></button><div style={{flex:1,textAlign:"center"}}><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><button className="icon-button" aria-label="Next month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()+1,1))}><ChevronRight size={16}/></button></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
+        {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
+      </div><p className="tiny muted" style={{ margin:"15px 0 0" }}>Choose a date to create a plan. The date is set in the form so you can add an event name, occasion and saved outfit.</p></section>
+      <section className="section"><div className="section-head"><div><span className="eyebrow">UP NEXT</span><h2 className="section-title">Your upcoming plans</h2></div></div>
+        {plans.filter(p=>p.plan_date>=todayIso()).length ? <div className="stack">{plans.filter(p=>p.plan_date>=todayIso()).sort((a,b)=>a.plan_date.localeCompare(b.plan_date)).map(plan=><div className="surface row" key={plan.id}><div style={{ display:"flex",gap:13,alignItems:"center",minWidth:0 }}><div className="avatar"><CalendarDays size={16}/></div><div style={{ minWidth:0 }}><strong style={{fontSize:13}}>{plan.event_title}</strong><p className="tiny muted" style={{margin:"5px 0 0"}}>{formatDate(plan.plan_date)} · {plan.occasion}{plan.notes?" · "+plan.notes:""}</p></div></div><div className="tool-row"><button className="button compact" onClick={()=>openModal("plan",plan.outfit_id,plan.plan_date,plan)}><Pencil size={12}/>Edit</button><button className="icon-button" onClick={async()=>{if(!user||!confirm("Delete this plan?"))return;const {error}=await createClient().from("outfit_plans").delete().eq("id",plan.id).eq("user_id",user.id);if(error)showToast("Couldn't remove plan.");else{setPlans(p=>p.filter(x=>x.id!==plan.id));showToast("Plan removed.");}}} aria-label="Delete plan"><Trash2 size={15}/></button></div></div>)}</div> : <EmptyState icon={CalendarDays} title="Your calendar has room." body="Add an event and attach a saved look, or create the plan now and choose an outfit later." action="Add your first plan" onAction={()=>openModal("plan")}/>}
+      </section>
+    </>;
+  }
+
+  function renderLooks() {
+    return <>
+      <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">A PRIVATE RECORD OF YOUR STYLE</span><h1 className="page-title serif">Your lookbook.</h1><p className="page-subtitle">Saved combinations, outfits you wore and moments you want to remember. Nothing is public unless you choose to share it in a future community feature.</p></div><button className="button primary" onClick={()=>openModal("look")}><Plus size={15}/>Record a look</button></div>
+      <div className="filter-row section"><button className="filter-pill active">All looks · {savedLooks.length}</button><span className="badge neutral"><LockKeyhole size={12}/>Private by default</span></div>
+      {savedLooks.length ? <div className="look-grid">{savedLooks.map(outfit=>{const pieces=outfitItems(outfit);return <article className="look-card" key={outfit.id}><img src={outfit.cover_url||pieces.find(i=>i.image_url)?.image_url||heroImage} alt={outfit.title} loading="lazy"/><div className="look-info"><div className="row"><span className="badge neutral">{outfit.status==="worn"?"WORN":outfit.status==="planned"?"PLANNED":"SAVED"}</span><button className="icon-button" style={{width:30,height:30}} onClick={()=>void deleteOutfit(outfit)} aria-label="Delete look"><Trash2 size={13}/></button></div><strong style={{display:"block",marginTop:11}}>{outfit.title}</strong><p>{outfit.occasion} · {formatDate(outfit.worn_at||outfit.created_at)}</p>{pieces.length>0&&<p>{pieces.map(x=>x.name).join(" · ")}</p>}<div className="tool-row" style={{marginTop:12}}>{outfit.status!=="worn"&&<button className="button compact" onClick={()=>void markWorn(outfit)}><Check size={13}/>Wore this</button>}<button className="button compact" onClick={()=>void reactToOutfit(outfit,"like")} aria-label="Like look"><ThumbsUp size={13}/></button><button className="button compact" onClick={()=>void shareLook(outfit)} aria-label={"Share "+outfit.title}><ArrowUpRight size={13}/>Share</button>{outfit.cover_image_path&&<button className="button compact" onClick={()=>{setCommunityDraft({id:outfit.id,title:outfit.title,occasion:outfit.occasion,coverPath:outfit.cover_image_path!});switchScreen("Community");}}><Users size={13}/>Post in LOOKU</button>}<button className="button compact" onClick={()=>{switchScreen("TryOn");showToast("Choose a photographed garment for a single-piece virtual try-on.");}}><Camera size={13}/>Preview on me</button><button className="button compact" onClick={()=>void reactToOutfit(outfit,"dislike")} aria-label="Dislike look"><ThumbsDown size={13}/></button></div></div></article>})}</div> : <EmptyState icon={ImagePlus} title="Keep the looks you love." body="Save an AI-generated outfit or upload a real outfit photo. Over time this becomes a useful record of combinations you can repeat." action="Record a look" onAction={()=>openModal("look")}/>}
+      <section className="section"><div className="section-head"><div><span className="eyebrow">THE IDEAS YOU'RE CONSIDERING</span><h2 className="section-title">Wishlist</h2><p className="section-note">Saved product links aren't owned clothing and won't be used in outfit generation.</p></div><button className="button compact" onClick={()=>openModal("wish")}><Plus size={13}/>Add idea</button></div>
+      {wishlist.length ? <div className="stack">{wishlist.map(w=><div className="surface row" key={w.id}><div style={{minWidth:0}}><strong style={{fontSize:13}}>{w.title}</strong><p className="small muted" style={{margin:"5px 0 0"}}>{w.note||"Personal shopping idea"}{w.product_url&&safeHostname(w.product_url)?" · "+safeHostname(w.product_url):""}</p>{w.product_url&&safeExternalUrl(w.product_url)&&<a className="text-action" href={safeExternalUrl(w.product_url)||undefined} target="_blank" rel="noreferrer">Open retailer <ExternalLink size={11} style={{display:"inline"}}/></a>}</div><button className="icon-button" onClick={()=>void deleteWish(w)} aria-label="Remove wishlist idea"><Trash2 size={14}/></button></div>)}</div> : <div className="surface row"><div><strong style={{fontSize:12}}>Keep your future purchases intentional.</strong><p className="small muted" style={{margin:"5px 0 0"}}>Save a product URL and why it belongs in your wardrobe.</p></div><button className="button compact" onClick={()=>openModal("wish")}>Add wishlist idea</button></div>}
+      </section>
+    </>;
+  }
+
+  function renderShop() {
+    return <>
+      <div><span className="eyebrow">BUY WITH INTENTION</span><h1 className="page-title serif">The curated shop.</h1><p className="page-subtitle">Shop for a genuine gap in your wardrobe. Approved products appear when licensed merchant feeds are live; meanwhile, browse researched Kenyan retailers below.</p></div>
+      <div className="privacy-banner section"><ShieldCheck/><span><strong>No fake inventory.</strong> Prices and stock are not invented. The storefront will show only products with a reviewed source, permission to display their media, and a working merchant destination.</span></div>
+      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2><p className="section-note">Only your allow-listed admin account can manage these records.</p></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
+        {adminProducts.length ? <div className="stack" style={{marginTop:15}}>{adminProducts.map(p=><div className="outfit-row" key={p.id}>{p.image_url?<img src={p.image_url} alt=""/>:<div className="avatar"><ShoppingBag size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{p.title}</strong><small>{p.merchant} · {p.currency} {p.price ?? "price not set"}</small><div className="tool-row" style={{marginTop:7}}><button className="button compact" onClick={()=>void toggleProduct(p,"is_active")}>{p.is_active?"Hide":"Activate"}</button><button className="button compact" onClick={()=>void toggleProduct(p,"is_approved")}>{p.is_approved?"Unapprove":"Approve"}</button><button className="button compact" onClick={()=>void deleteProduct(p)}><Trash2 size={12}/>Delete</button></div></div><span className="badge neutral">{p.is_approved?"Approved":"Pending"}</span></div>)}</div> : <p className="small muted" style={{marginTop:12}}>No catalog items have been added yet.</p>}</section>}
+      <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">A considered edit, not endless scrolling.</h2></div></div>
+        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="We're curating the first collection." body="Retail listings will appear once merchants and product-image permissions are verified. You can still save individual product links to your wishlist." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
+      </section>
+      <RetailDiscover wardrobe={items} style={styleName} onSaveWishlist={saveOccasionWishlist}/>
+      {user && <ShoppingJournal userId={user.id}/>}
+      <section className="section surface soft"><div className="row" style={{alignItems:"start"}}><div><span className="eyebrow">ARE YOU A BRAND OR A SHOP?</span><h2 className="section-title">Make your products part of someone's style.</h2><p className="section-note" style={{maxWidth:490}}>Request a partnership to discuss a product feed, image permissions, stock updates and referral terms. We review all merchants before publishing.</p></div><Store size={27}/></div><button className="button" style={{marginTop:17}} onClick={()=>openModal("merchant")}>Apply as a merchant <ArrowRight size={14}/></button></section>
+    </>;
+  }
+
+  function renderInsights() {
+    return <StyleInsights
+      items={items}
+      outfits={outfits}
+      integrationHealth={integrationHealth}
+      calendarConnected={calendarStatus.connected}
+      weatherConnected={Boolean(weather)}
+      weatherCitySet={Boolean(weatherCity)}
+      productCount={products.length}
+      onStyleItem={(name) => {
+        setMood("Build a look featuring " + name + ".");
+        switchScreen("Stylist");
+        void generateLooks("Build a look featuring " + name + ".", occasion);
+      }}
+    />;
+  }
+
+  async function saveOccasionWishlist(title: string, url: string, note: string): Promise<boolean> {
+    if (!user) { showToast("Sign in to save a private wishlist."); return false; }
+    const safeUrl = safeExternalUrl(url);
+    if (!safeUrl) { showToast("Use a valid HTTPS product URL."); return false; }
+    const { error } = await createClient().from("wishlist_items").insert({
+      user_id: user.id,
+      title: title.slice(0, 160),
+      product_url: safeUrl,
+      note: note.slice(0, 500) || null,
+    });
+    if (error) { showToast("Couldn't save that product link. Please try again."); return false; }
+    await loadData(user.id);
+    showToast("Product link saved to your private wishlist.");
+    return true;
+  }
+
+  function renderOccasionStudio() {
+    return <OccasionStudio
+      items={items}
+      products={products}
+      generated={generated}
+      styling={styling}
+      onGenerate={(prompt, selectedOccasion) => { setOccasion(selectedOccasion); void generateLooks(prompt, selectedOccasion); }}
+      onPlan={(date, title, selectedOccasion) => { setOccasion(selectedOccasion); openModal("plan", null, date); setModalPlanTitle(title); setModalPlanOccasion(selectedOccasion); }}
+      onRenderLook={(idea, index) => renderOutfitIdea(idea, index)}
+      onSaveWishlist={saveOccasionWishlist}
+    />;
+  }
+
     function renderTryOn() {
     return <TryOnRoom userId={user?.id || ""} items={items} configured={Boolean(integrationHealth?.tryOnConfigured)} />;
   }
