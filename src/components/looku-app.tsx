@@ -145,6 +145,8 @@ export function LookuApp() {
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth | null>(null);
   const [calendarStatus, setCalendarStatus] = useState<CalendarPayload>({ configured: false, connected: false, events: [] });
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [currentTime, setCurrentTime] = useState(0);
+  useEffect(() => { setCurrentTime(Date.now()); }, []);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarMessage, setCalendarMessage] = useState("");
   const [calendarCursor, setCalendarCursor] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -306,7 +308,7 @@ export function LookuApp() {
     if (availableItems.length < 2) { showToast("Add at least two available items to get started."); switchScreen("Closet"); return; }
     setStyling(true); setAiError(""); setStylingNotice("");
     try {
-      const now = Date.now();
+      const now = currentTime;
       const upcomingEvents = calendarEvents.filter(event => {
         const start = new Date(event.start).getTime();
         return Number.isFinite(start) && start >= now && start <= now + 7 * 24 * 60 * 60 * 1000;
