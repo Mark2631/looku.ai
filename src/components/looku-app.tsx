@@ -465,17 +465,37 @@ export function LookuApp() {
     const colors = String(form.get("colors") || "").split(",").map(value => value.trim()).filter(Boolean).slice(0,5);
     const formality = Number(form.get("formality") || 5);
     const productUrl = String(form.get("product_url") || "").trim();
+    const image = form.get("photo") as File | null;
     if (productUrl && !safeExternalUrl(productUrl)) { setModalError("Use a valid HTTPS product URL."); setModalBusy(false); return; }
     if (!name) { setModalError("Garment name is required."); setModalBusy(false); return; }
-    const { error } = await createClient().from("wardrobe_items").update({
-      name: name.slice(0,100), brand: brand || null, category, colors,
-      formality: Math.min(10, Math.max(1, formality)),
-      attributes: { ...(editingGarment.attributes || {}), productUrl: productUrl || null, manualCorrection: true, correctedAt: new Date().toISOString() },
-      updated_at: new Date().toISOString(),
-    }).eq("id", editingGarment.id).eq("user_id", user.id);
-    if (error) { setModalError(error.message || "Couldn't update this garment."); setModalBusy(false); return; }
-    await loadData(user.id);
-    setEditingGarment(null); setModal(null); setModalBusy(false); showToast("Garment details updated.");
+    if (image && image.size && (!["image/jpeg","image/png","image/webp"].includes(image.type) || image.size > 10 * 1024 * 1024)) {
+      setModalError("Use a JPG, PNG or WebP image under 10 MB."); setModalBusy(false); return;
+    }
+    const supabase = createClient();
+    let uploadedPath: string | null = null;
+    try {
+      if (image && image.size) {
+        uploadedPath = user.id + "/" + crypto.randomUUID() + "-" + image.name.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(-70);
+        const { error: uploadError } = await supabase.storage.from("wardrobe-private").upload(uploadedPath, image, { contentType:image.type, upsert:false });
+        if (uploadError) throw uploadError;
+      }
+      const { error } = await supabase.from("wardrobe_items").update({
+        name: name.slice(0,100), brand: brand || null, category, colors,
+        formality: Math.min(10, Math.max(1, formality)),
+        ...(uploadedPath ? { image_path: uploadedPath } : {}),
+        attributes: { ...(editingGarment.attributes || {}), productUrl: productUrl || null, ...(uploadedPath ? { photo_pending:false } : {}), manualCorrection: true, correctedAt: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      }).eq("id", editingGarment.id).eq("user_id", user.id);
+      if (error) throw error;
+      if (uploadedPath && editingGarment.image_path) {
+        await supabase.storage.from("wardrobe-private").remove([editingGarment.image_path]);
+      }
+      await loadData(user.id);
+      setEditingGarment(null); setModal(null); showToast("Garment updated." + (uploadedPath ? " Your photo is now ready for previews." : ""));
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from("wardrobe-private").remove([uploadedPath]);
+      setModalError(error instanceof Error ? error.message : "Couldn't update this item.");
+    } finally { setModalBusy(false); }
   }
 
   async function submitGarment(e: FormEvent<HTMLFormElement>) {
@@ -781,9 +801,9 @@ export function LookuApp() {
       content = <form onSubmit={submitEditGarment}>
         <div style={{ display:"flex",gap:13,alignItems:"center",marginBottom:18 }}>
           {editingGarment.image_url ? <img src={editingGarment.image_url} alt={editingGarment.name} style={{width:82,height:96,objectFit:"cover",borderRadius:12}}/> : <div className="avatar lg"><Shirt/></div>}
-          <div><span className="badge neutral">Your item</span><p className="small muted" style={{lineHeight:1.6,margin:"8px 0 0"}}>Correct any AI-generated details. Your original photo stays private and unchanged.</p></div>
+          <div><span className="badge neutral">Your item</span><p className="small muted" style={{lineHeight:1.6,margin:"8px 0 0"}}>Correct any garment details and optionally add a private photo. Existing photos remain private.</p></div>
         </div>
-        <label className="field">Garment name<input className="input" name="name" required maxLength={100} defaultValue={editingGarment.name}/></label>
+        <label className="field">Add or replace garment photo <small>Optional, up to 10 MB. Adding a photo makes this item eligible for single-garment virtual try-on.</small><input className="input" name="photo" type="file" accept="image/jpeg,image/png,image/webp"/></label><label className="field">Garment name<input className="input" name="name" required maxLength={100} defaultValue={editingGarment.name}/></label>
         <label className="field">Category<select className="input" name="category" defaultValue={editingGarment.category}>{categories.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}</select></label>
         <label className="field">Main colors <small>Separate multiple colors with commas</small><input className="input" name="colors" maxLength={160} defaultValue={(editingGarment.colors||[]).join(", ")} placeholder="e.g. navy, cream"/></label>
         <label className="field">Brand (optional)<input className="input" name="brand" maxLength={120} defaultValue={editingGarment.brand||""}/></label>
