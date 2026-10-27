@@ -175,8 +175,8 @@
   .app-shell-chat .topbar{margin:0 -12px;padding:10px 12px;min-height:60px}
   .looku-brand .tagline{display:none}
   .looku-topbar .topbar-right{gap:5px}
-  .looku-new-look-button{font-size:0;padding:0;width:39px;height:39px;min-height:39px;border-radius:50%}
-  .looku-new-look-button svg{width:18px;height:18px}
+  .looku-new-look-button{font-size:10px;padding:0 10px;width:auto;min-width:62px;height:36px;min-height:36px;border-radius:999px}
+  .looku-new-look-button svg{width:14px;height:14px}
   .looku-chat-home{padding-top:27px}
   .looku-home-intro{text-align:left;margin-bottom:18px}
   .looku-home-subtitle{margin:0}
@@ -185,7 +185,7 @@
   .looku-look-tile{flex-basis:148px}
   .looku-product-tile{flex-basis:138px}
   .looku-composer-dock{width:calc(100vw - 20px);bottom:max(8px,env(safe-area-inset-bottom));padding:8px;border-radius:22px}
-  .looku-composer-input{font-size:13px!important;min-height:38px}
+  .looku-composer-input{font-size:13px!important;min-height:38px;resize:none;overflow-y:hidden}
   .looku-composer-tool,.looku-composer-send{width:36px;height:36px}
   .looku-composer-hint{font-size:8px}
   .looku-theme-panel{align-items:flex-start;flex-direction:column}
