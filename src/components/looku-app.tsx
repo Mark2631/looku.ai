@@ -1310,7 +1310,7 @@ export function LookuApp() {
         <div className="looku-drawer-head"><div className="wordmark">looku<span className="dot">.</span></div><button type="button" className="icon-button" onClick={() => setMoreOpen(false)} aria-label="Close menu"><X size={16}/></button></div>
         <button type="button" className="button looku-drawer-new" onClick={startNewLook}><Plus size={15}/>New Look</button>
         <nav aria-label="Looku sections">
-          {navItems.map((item, index) => {
+          {navItems.map(item => {
             const label = item.id === "Today" ? "Today’s selection" : item.id === "Closet" ? "Wardrobe" : item.id === "Plan" ? "Calendar" : item.id === "Looks" ? "Memories" : item.id === "Shop" ? "Store" : item.id === "Settings" ? "Profile & preferences" : item.id === "Stylist" ? "AI stylist chat" : item.label;
             return <div key={item.id}>
               {item.group && <div className="eyebrow looku-drawer-group">{item.group}</div>}
