@@ -16,6 +16,7 @@ import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
 import { WardrobeCapture } from "@/components/wardrobe-capture";
+import { ShoppingJournal } from "@/components/shopping-journal";
 import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
 import { greetingForHour } from "@/lib/greeting";
@@ -60,6 +61,14 @@ const navItems: { id: Screen; label: string; icon: typeof House; group?: string 
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Outerwear", "Dresses", "Swimwear", "Accessories", "Activewear", "Sleepwear", "Bags", "Other"];
 const occasions = ["Everyday", "Birthday", "Graduation", "Date night", "Wedding guest", "Campus event", "Job interview", "Dinner", "Family celebration", "Church or faith ceremony", "Workday", "Travel day", "Outdoor event", "Gym or active", "Formal event", "Online interview", "Campus date", "Conference / networking", "Concert / festival", "Beach or pool day", "Photoshoot", "Baby shower", "First day at work", "Relaxed / Home", "Work / Presentation", "Event / Date", "Wedding / Celebration", "Campus", "Travel", "Gym / Active", "Church / Ceremony"];
 const styles = ["Relaxed minimal", "Smart casual", "Streetwear", "Classic elegance", "Colorful creative", "Comfort-first", "Modest and polished"];
+const STYLE_TEST_SCENARIOS = [
+  { title:"Dinner with friends", caption:"Comfortable with a little polish", occasion:"Dinner", prompt:"Style me for a casual dinner with friends. Consider what I own and my style preferences." },
+  { title:"Graduation", caption:"A look worth remembering", occasion:"Graduation", prompt:"Help me dress for a graduation celebration without overdoing it." },
+  { title:"First date", caption:"Feel confident, still feel yourself", occasion:"Date night", prompt:"I need an effortless date night outfit that feels like me." },
+  { title:"Casual walk", caption:"Everyday, but intentional", occasion:"Everyday", prompt:"Make an easy everyday look for a relaxed walk." },
+  { title:"Job interview", caption:"Professional without a costume", occasion:"Job interview", prompt:"Build a polished, confident outfit for a job interview." },
+  { title:"Wedding guest", caption:"Dress for the celebration", occasion:"Wedding guest", prompt:"Find a wedding guest outfit that respects the dress code." }
+] as const;
 const heroImage = "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=85";
 
 function todayIso() {
@@ -927,6 +936,10 @@ export function LookuApp() {
         <button type="button" onClick={() => switchScreen("TryOn")}><span className="jump-icon"><WandSparkles size={21}/></span><span><strong>See it on you</strong><small>Preview a look before deciding</small></span><ArrowUpRight size={16}/></button>
         <button type="button" onClick={() => switchScreen("Occasion")}><span className="jump-icon"><CalendarCheck size={21}/></span><span><strong>Got somewhere to be?</strong><small>Dress for a real moment</small></span><ArrowUpRight size={16}/></button>
       </section>
+      <section className="section" aria-label="Style ideas for your next occasion">
+        <div className="section-head"><div><span className="eyebrow">A REASON TO RETURN</span><h2 className="section-title">Every occasion deserves your kind of look.</h2><p className="section-note">Try one of these sample styling briefs, or tell the stylist about your own plans. These are testing prompts — not clothes or products added to your wardrobe.</p></div></div>
+        <div className="moment-grid">{STYLE_TEST_SCENARIOS.map(scene=><button className="moment-card" key={scene.title} type="button" onClick={()=>{setOccasion(scene.occasion);setMood(scene.prompt);setChatInput(scene.prompt);switchScreen("Stylist");}}><span className="eyebrow">{scene.occasion}</span><strong>{scene.title}</strong><small>{scene.caption}</small><span className="moment-arrow"><ArrowUpRight size={16}/></span></button>)}</div>
+      </section>
       {weather && <div className="surface row section" style={{ marginTop: 16, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}><div className="avatar"><CloudSun size={19}/></div><div><strong style={{ fontSize: 13 }}>{weather.location.name}{weather.location.region ? ", "+weather.location.region : ""} · {Math.round(weather.current.tempC)}°C</strong><p className="tiny muted" style={{ margin: "4px 0 0" }}>{weather.current.condition} · Feels like {Math.round(weather.current.feelsLikeC)}°C · Wind {Math.round(weather.current.windKph)} km/h</p></div></div>
         <span className="badge neutral">Live weather</span>
@@ -1050,6 +1063,7 @@ export function LookuApp() {
         {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="We're curating the first collection." body="Retail listings will appear once merchants and product-image permissions are verified. You can still save individual product links to your wishlist." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
       </section>
       <RetailDiscover wardrobe={items} style={styleName} onSaveWishlist={saveOccasionWishlist}/>
+      {user && <ShoppingJournal userId={user.id}/>}
       <section className="section surface soft"><div className="row" style={{alignItems:"start"}}><div><span className="eyebrow">ARE YOU A BRAND OR A SHOP?</span><h2 className="section-title">Make your products part of someone's style.</h2><p className="section-note" style={{maxWidth:490}}>Request a partnership to discuss a product feed, image permissions, stock updates and referral terms. We review all merchants before publishing.</p></div><Store size={27}/></div><button className="button" style={{marginTop:17}} onClick={()=>openModal("merchant")}>Apply as a merchant <ArrowRight size={14}/></button></section>
     </>;
   }
