@@ -169,7 +169,7 @@ export function LookuApp() {
       ]);
       if (profileRes.data) setProfile({ full_name: profileRes.data.full_name, style_preferences: profileRes.data.style_preferences || {}, onboarding_completed: Boolean(profileRes.data.onboarding_completed) });
       if (profileRes.error) console.error("LOOKU profile load", profileRes.error.message);
-      const mappedItems: WardrobeItem[] = await Promise.all((itemRes.data || []).map(async (item: any) => {
+      const mappedItems: WardrobeItem[] = await Promise.all((itemRes.data || []).map(async (item: Omit<WardrobeItem, "image_url">) => {
         let imageUrl: string | null = null;
         if (item.image_path) {
           const { data } = await supabase.storage.from("wardrobe-private").createSignedUrl(item.image_path, 3600);
@@ -179,7 +179,7 @@ export function LookuApp() {
       }));
       setItems(mappedItems);
       const links = (outfitItemsRes.data || []) as { outfit_id: string; wardrobe_item_id: string; position: number }[];
-      const mappedOutfits: Outfit[] = await Promise.all((outfitRes.data || []).map(async (outfit: any) => {
+      const mappedOutfits: Outfit[] = await Promise.all((outfitRes.data || []).map(async (outfit: Omit<Outfit, "cover_url" | "item_ids">) => {
         let coverUrl: string | null = null;
         if (outfit.cover_image_path) {
           const { data } = await supabase.storage.from("wardrobe-private").createSignedUrl(outfit.cover_image_path, 3600);
@@ -707,7 +707,7 @@ export function LookuApp() {
   }
 
   async function toggleProduct(product: Product, key: "is_active" | "is_approved") {
-    const next = !Boolean((product as any)[key]);
+    const next = !Boolean(product[key]);
     const response = await fetch("/api/admin/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: product.id, changes: { [key]: next } }) });
     const result = await response.json();
     if (!response.ok) { showToast(result.error || "Couldn't update product."); return; }
