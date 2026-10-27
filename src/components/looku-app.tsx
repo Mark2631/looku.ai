@@ -1082,10 +1082,20 @@ export function LookuApp() {
         <div className="looku-section-head"><div><h2>Memories</h2><p>The looks you’ve actually worn and want to remember.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
         {memories.length ? <div className="looku-shelf-row">{memories.map(outfit => {
           const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
+          const menuId = "memory-" + outfit.id;
           return <article className="looku-look-tile" key={outfit.id}>
-            <button type="button" className="looku-look-visual" onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt={outfit.title}/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Look memory</span></div>}</button>
+            <button type="button" className="looku-look-visual" aria-label={"Open " + outfit.title + " in memories"} onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt=""/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Look memory</span></div>}</button>
             <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{formatDate(outfit.worn_at || outfit.created_at)} · {outfit.occasion}</p>
-              <div className="looku-card-actions"><button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button><button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button><button className="looku-card-action" type="button" onClick={() => switchScreen("Looks")} aria-label="More memory actions" title="More actions"><MoreHorizontal size={16}/></button></div>
+              <div className="looku-card-actions">
+                <button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button>
+                <button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button>
+                <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
+              </div>
+              {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
+                <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
+                <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Plan this look</button>
+                <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open memories</button>
+              </div>}
             </div>
           </article>;
         })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Your style memories will build as you go.</strong>Save a look you love or record an outfit you actually wore.</div><button className="button compact" type="button" onClick={() => openModal("look")}><Plus size={13}/>Record a look</button></div>}
@@ -1095,10 +1105,21 @@ export function LookuApp() {
         <div className="looku-section-head"><div><h2>Saved & liked</h2><p>Your shortlist of looks to revisit, repeat, or plan.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
         {savedAndLiked.length ? <div className="looku-shelf-row">{savedAndLiked.map(outfit => {
           const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
-          return <article className="looku-look-tile" key={"favourite-" + outfit.id}>
-            <button type="button" className="looku-look-visual" onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt={outfit.title}/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Saved look</span></div>}</button>
+          const menuId = "favourite-" + outfit.id;
+          return <article className="looku-look-tile" key={menuId}>
+            <button type="button" className="looku-look-visual" aria-label={"Open " + outfit.title + " in memories"} onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt=""/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Saved look</span></div>}</button>
             <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{outfit.occasion}</p>
-              <div className="looku-card-actions"><button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button><button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button><button className="looku-card-action" type="button" onClick={() => switchScreen("Looks")} aria-label="More saved look actions" title="More actions"><MoreHorizontal size={16}/></button></div>
+              <div className="looku-card-actions">
+                <button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button>
+                <button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button>
+                <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
+              </div>
+              {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
+                <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
+                <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Plan this look</button>
+                <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open lookbook</button>
+                {likedOutfitIds.includes(outfit.id) && <button type="button" onClick={() => { setLookMenu(null); void reactToOutfit(outfit, "like"); }}><Heart size={14}/>Remove from liked</button>}
+              </div>}
             </div>
           </article>;
         })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Keep the looks that feel like you.</strong>Use the bookmark on any selection to save it here.</div><button className="button compact" type="button" onClick={() => switchScreen("Looks")}><Bookmark size={13}/>Open lookbook</button></div>}
