@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: { title: "LOOKU — Your style, understood.", description: "A calmer way to get dressed.", type: "website" },
 };
 
-export const viewport: Viewport = { themeColor: "#f8f6f2", width: "device-width", initialScale: 1, maximumScale: 1 };
+export const viewport: Viewport = { themeColor: "#101113", width: "device-width", initialScale: 1, maximumScale: 1 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en"><body>{children}</body></html>;
