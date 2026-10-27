@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const [profileResult, feedbackResult, wornResult] = await Promise.all([
       supabase.from("profiles").select("style_preferences").eq("id", user.id).maybeSingle(),
-      supabase.from("outfit_feedback").select("reaction,reasons,note,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(25),
+      supabase.from("outfit_feedback").select("outfit_id,reaction,reasons,note,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(25),
       supabase.from("outfits").select("id,title,occasion,worn_at").eq("user_id", user.id).eq("status", "worn").not("worn_at", "is", null).order("worn_at", { ascending: false }).limit(10),
     ]);
     const wornOutfitIds = (wornResult.data || []).map(o => o.id);
@@ -57,6 +57,20 @@ export async function POST(request: NextRequest) {
       : { data: [] as { outfit_id: string; wardrobe_item_id: string }[] };
     const recentlyWornItemIds = Array.from(new Set((wornLinks.data || []).map(link => link.wardrobe_item_id)));
     const recentlyWornItems = recentlyWornItemIds.map(id => items.find(item => item.id === id)).filter(Boolean).map(item => ({ id: item!.id, name: item!.name, category: item!.category }));
+    const recentReactions = (feedbackResult.data || []).filter(entry => entry.outfit_id && (entry.reaction === "like" || entry.reaction === "dislike"));
+    const reactedOutfitIds = Array.from(new Set(recentReactions.map(entry => entry.outfit_id))).slice(0, 25);
+    const reactedItemLinks = reactedOutfitIds.length
+      ? await supabase.from("outfit_items").select("outfit_id,wardrobe_item_id").eq("user_id", user.id).in("outfit_id", reactedOutfitIds)
+      : { data: [] as {outfit_id:string;wardrobe_item_id:string}[] };
+    const likedItemIds = new Set<string>();
+    const dislikedItemIds = new Set<string>();
+    for (const reaction of recentReactions) {
+      for (const link of reactedItemLinks.data || []) {
+        if (link.outfit_id !== reaction.outfit_id) continue;
+        if (reaction.reaction === "like") likedItemIds.add(link.wardrobe_item_id);
+        if (reaction.reaction === "dislike") dislikedItemIds.add(link.wardrobe_item_id);
+      }
+    }
     const preferences = profileResult.data?.style_preferences || {};
     const feedback = (feedbackResult.data || []).map(entry => ({ reaction: entry.reaction, reasons: entry.reasons, note: entry.note })).slice(0, 20);
 
@@ -81,7 +95,7 @@ export async function POST(request: NextRequest) {
       "User wardrobe (IDs are the only allowed item references): " + JSON.stringify(items)
     ].join("\n\n");
     const wardrobeFallback = () => {
-      const matching = matchWardrobeOutfits(items, body.data.occasion, body.data.count, recentlyWornItemIds);
+      const matching = matchWardrobeOutfits(items, body.data.occasion, body.data.count, recentlyWornItemIds, [...likedItemIds], [...dislikedItemIds], Array.isArray(preferences.avoidedColors) ? preferences.avoidedColors.filter((x:unknown):x is string => typeof x === "string").slice(0,15) : []);
       if (!matching.length) return NextResponse.json({ error: "Your closet needs a complete combination: a top with bottoms, a dress, or swimwear for pool/beach activities. Add at least one more compatible piece." }, { status: 422 });
       return NextResponse.json({ outfits: matching, method: "wardrobe-rules", notice: "AI model unavailable or returned an invalid result. These are rule-based matches made exclusively from your own available clothing." }, { headers: { "Cache-Control": "no-store" } });
     };
