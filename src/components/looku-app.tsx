@@ -15,7 +15,7 @@ import { isSupabaseConfigured } from "@/lib/config";
 import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
-import { QuickCloset } from "@/components/quick-closet";
+import { WardrobeCapture } from "@/components/wardrobe-capture";
 import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
 import { greetingForHour } from "@/lib/greeting";
@@ -950,7 +950,7 @@ export function LookuApp() {
         {latest && latestItems.length > 0 ? <div className="surface">
           <div className="row" style={{ marginBottom: 15 }}><div><span className="badge">{latest.status === "worn" ? "WORN" : latest.status === "planned" ? "PLANNED" : "SAVED LOOK"}</span><h3 style={{ margin: "10px 0 5px", font: "400 25px Georgia,serif" }}>{latest.title}</h3><p className="small muted" style={{ margin: 0 }}>{latest.occasion} · {formatDate(latest.created_at)}</p></div><button className="button compact" onClick={() => switchScreen("Looks")}>Open lookbook</button></div>
           <div className="outfit-composition">{latestItems.slice(0,4).map(item => <div key={item.id} className="piece-card"><img src={item.image_url || ""} alt={item.name}/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category}</span></div></div>)}</div>
-        </div> : <EmptyState icon={WandSparkles} title={items.length < 2 ? "Your first look starts with your clothes." : "Your wardrobe is ready for its first edit."} body={items.length < 2 ? "Add at least two available garments to let the stylist build complete combinations. A few tops, bottoms and shoes are a good start." : "Generate a few outfit options, save the ones you like, and LOOKU will remember your choices."} action={items.length < 2 ? "Add garments" : "Meet your stylist"} onAction={() => items.length < 2 ? openModal("garment") : switchScreen("Stylist")}/>}
+        </div> : <EmptyState icon={WandSparkles} title={items.length < 2 ? "Your first look starts with your clothes." : "Your wardrobe is ready for its first edit."} body={items.length < 2 ? "Add at least two available garments to let the stylist build complete combinations. A few tops, bottoms and shoes are a good start." : "Generate a few outfit options, save the ones you like, and LOOKU will remember your choices."} action={items.length < 2 ? "Start with a photo" : "Meet your stylist"} onAction={() => { if(items.length<2){setShowOutfitScanner(true);switchScreen("Closet");}else switchScreen("Stylist"); }}/>}
       </section>
       <section className="section">
         <div className="section-head"><div><span className="eyebrow">YOUR WEEK, LESS RUSHED</span><h2 className="section-title">Coming up</h2></div><button className="button compact" onClick={() => switchScreen("Plan")}>Open planner <ArrowRight size={14}/></button></div>
@@ -961,9 +961,9 @@ export function LookuApp() {
 
   function renderCloset() {
     return <>
-      <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">THE PIECES THAT MAKE YOU, YOU</span><h1 className="page-title serif">My closet.</h1><p className="page-subtitle">{items.length} pieces in your collection · {availableItems.length} ready to wear. Tap a few essentials you own, add a batch of photos, or edit pieces as you go. You don't need to photograph your whole wardrobe.</p></div><button className="button primary" onClick={() => openModal("garment")}><Plus size={15}/>Add clothes</button></div>
-      {user && <QuickCloset userId={user?.id || ""} existing={items} onImported={async()=>{if(user?.id) await loadData(user.id);showToast("Your quick closet is ready to style.");}} onPhotoUpload={()=>openModal("garment")}/> }
-      <div className="tool-row section"><button className="button" onClick={()=>setShowOutfitScanner(open=>!open)}><Camera size={14}/>{showOutfitScanner?"Close outfit scan":"Scan several pieces from one outfit photo"}</button></div>
+      <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">YOUR PERSONAL STYLE LIBRARY</span><h1 className="page-title serif">My closet.</h1><p className="page-subtitle">{items.length ? items.length+" pieces saved. Your wardrobe grows as you wear, photograph or describe outfits — no complete inventory needed." : "A wardrobe that builds itself around your real life. Start with an outfit photo or describe what you own. You don't need a complete list."}</p></div></div>
+      {user && <WardrobeCapture userId={user.id} onImported={async()=>{await loadData(user.id);showToast("Your wardrobe is updated.");}} onScan={()=>setShowOutfitScanner(true)}/>}
+      {showOutfitScanner && <div className="tool-row section"><button className="button compact" onClick={()=>setShowOutfitScanner(false)}><X size={14}/>Close outfit scanner</button></div>}
       {user && showOutfitScanner && <ScanOutfit userId={user.id} onImported={async()=>{await loadData(user.id);showToast("Confirmed garments added from your outfit photo.");}} onClose={()=>setShowOutfitScanner(false)}/>}
 
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Wardrobe pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Clothing you own</span></div><div className="stat"><span className="stat-label">Ready to wear</span><div className="stat-number">{availableItems.length}</div><span className="stat-caption">Available for styling</span></div><div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Your personal outfit history</span></div></div>
