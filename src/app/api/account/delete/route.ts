@@ -6,7 +6,7 @@ import { decryptCalendarToken } from "@/lib/calendar-crypto";
 
 export const runtime = "nodejs";
 
-async function listAllObjectPaths(client: SupabaseClient<any, any, any>, bucket: string, basePath: string): Promise<string[]> {
+async function listAllObjectPaths(client: SupabaseClient, bucket: string, basePath: string): Promise<string[]> {
   const found: string[] = [];
   async function walk(path: string): Promise<void> {
     let offset = 0;
