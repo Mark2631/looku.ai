@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, Camera, LoaderCircle, Plus, ShieldCheck } from "lucide-react";
+import { Camera, LoaderCircle, Plus, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Item = { name: string; category: string; colors: string[] };
-const CATEGORIES = ["Tops","Bottoms","Shoes","Dresses","Outerwear","Accessories","Bags","Activewear","Swimwear","Sleepwear","Other"];
 function parseLine(line: string): Item | null {
   const name = line.trim().replace(/^[-*•\d.)\s]+/,"").slice(0,100);
   if (!name) return null;
