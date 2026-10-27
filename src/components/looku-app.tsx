@@ -398,7 +398,7 @@ export function LookuApp() {
     if(signal!=="love") setGenerated(old=>old.filter(x=>x!==idea));
   }
 
-  async function saveOutfit(idea: OutfitIdea, selectedOccasion = occasion) {
+  async function saveOutfit(idea: OutfitIdea, selectedOccasion = occasion, alsoLike = false) {
     if (!user) return;
     const validItems = idea.itemIds.filter(id => availableItems.some(item => item.id === id));
     if (validItems.length < 2) { showToast("Those pieces are no longer all available. Generate a fresh look."); return; }
@@ -412,6 +412,7 @@ export function LookuApp() {
       if (error || !outfit) throw error || new Error("Couldn't save this look.");
       const { error: itemError } = await supabase.from("outfit_items").insert(validItems.map((id, position) => ({ user_id: user.id, outfit_id: outfit.id, wardrobe_item_id: id, position })));
       if (itemError) { await supabase.from("outfits").delete().eq("id", outfit.id).eq("user_id", user.id); throw itemError; }
+      if (alsoLike) { await supabase.from("outfit_feedback").insert({ user_id: user.id, outfit_id: outfit.id, reaction: "like" }); }
       await loadData(user.id);
       setModal(null);
       showToast("Saved to your lookbook.");
@@ -1008,12 +1009,12 @@ export function LookuApp() {
               <div className="looku-look-details">
                 <strong title={idea.title}>{idea.title}</strong><p>{idea.style}</p>
                 <div className="looku-card-actions">
-                  <button className="looku-card-action" type="button" onClick={() => void recordSuggestionFeedback(idea, "love")} aria-label={"Like " + idea.title} title="Like this look"><Heart size={14}/></button>
+                  <button className="looku-card-action" type="button" onClick={() => { void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }} aria-label={"Like " + idea.title} title="Like this look"><Heart size={14}/></button>
                   <button className="looku-card-action" type="button" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save this look"><Bookmark size={14}/></button>
                   <button className={"looku-card-action" + (lookMenuId === menuId ? " active" : "")} type="button" onClick={() => setLookMenuId(current => current === menuId ? null : menuId)} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
                 </div>
                 {lookMenuId === menuId && <div className="looku-action-menu">
-                  <button type="button" onClick={() => { setLookMenuId(null); void recordSuggestionFeedback(idea, "love"); }}><Heart size={14}/>Like this look</button>
+                  <button type="button" onClick={() => { setLookMenuId(null); void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }}><Heart size={14}/>Like this look</button>
                   <button type="button" onClick={() => { setLookMenuId(null); void saveOutfit(idea); }}><Bookmark size={14}/>Pin to saved</button>
                   <button type="button" onClick={() => { setLookMenuId(null); void shareOutfitIdea(idea); }}><ArrowUpRight size={14}/>Share look</button>
                   <button type="button" onClick={() => { setLookMenuId(null); setChatInput("Make a new version of " + idea.title + ", with one thoughtful change."); document.getElementById("looku-composer-input")?.focus(); }}><WandSparkles size={14}/>Create a variation</button>
