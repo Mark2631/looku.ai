@@ -15,6 +15,7 @@ import { isSupabaseConfigured } from "@/lib/config";
 import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
 import { RetailDiscover } from "@/components/retail-discover";
+import { QuickCloset } from "@/components/quick-closet";
 import { TryOnRoom } from "@/components/tryon-room";
 
 type Screen = "Today" | "Closet" | "Stylist" | "Occasion" | "TryOn" | "Plan" | "Looks" | "Shop" | "Insights" | "Settings";
@@ -279,6 +280,9 @@ export function LookuApp() {
   const todayPlans = useMemo(() => plans.filter(p => p.plan_date === todayIso()), [plans]);
   const styleName = String(profile.style_preferences?.style || "Relaxed minimal");
   const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
+  const [localHour,setLocalHour] = useState<number | null>(null);
+  useEffect(() => { const update=()=>setLocalHour(new Date().getHours()); update(); const clock=window.setInterval(update,60000); return ()=>window.clearInterval(clock); }, []);
+  const timeGreeting = localHour === null ? "Hello" : localHour < 12 ? "Good morning" : localHour < 17 ? "Good afternoon" : "Good evening";
 
 
   function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
@@ -738,7 +742,7 @@ export function LookuApp() {
     } else if (modal === "garment") {
       title = "Add to your wardrobe";
       content = <form onSubmit={submitGarment}>
-        <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 17 }}>Upload a clear photo of one garment. Your image is stored privately. LOOKU will try to identify the garment, and you can correct the details afterwards.</p>
+        <p className="small muted" style={{ lineHeight: 1.6, marginBottom: 17 }}>Select multiple gallery photos in one batch; AI can suggest attributes for each. Or skip photos entirely using Quick Closet. Your uploaded images stay private.</p>
         <div className="field"><span>Garment photographs</span><div className="upload-box"><Camera/><strong style={{ display: "block", fontSize: 12 }}>Choose one or several photos</strong><small>JPG, PNG or WebP · Up to 10 MB each · 12 per batch</small><input id="garment-photo" type="file" name="image" accept="image/jpeg,image/png,image/webp" multiple required/><label htmlFor="garment-photo" className="button compact" style={{ marginTop: 12 }}>Browse photos</label></div></div>
         <label className="field">Item name <small>Required for one photo; batch uploads start with each file name</small><input className="input" name="name" maxLength={100} placeholder="e.g. Blue linen shirt"/></label>
         <div className="twocol">
@@ -820,7 +824,7 @@ export function LookuApp() {
       <div className="today-hero">
         <div className="hero-copy">
           <span className="eyebrow">YOUR DAILY EDIT · {formatDate(todayIso(), { weekday: "long", month: "long", day: "numeric" })}</span>
-          <h1 className="page-title serif">Good morning,<br/>{greetingName}.</h1>
+          <h1 className="page-title serif">{timeGreeting},<br/>{greetingName}.</h1>
           <p className="page-subtitle">{items.length ? "Your wardrobe is here. Let's find something that feels like you." : "Start with a few pieces you already own. Your first good outfit is closer than you think."}</p>
           <div className="hero-actions"><button className="button primary" onClick={() => { switchScreen("Stylist"); if (availableItems.length >= 2) void generateLooks("Choose the best all-round outfit for my day.", occasion); }} disabled={styling}><Sparkles size={15}/>{styling?"Styling your wardrobe…":"Find my look"}<ArrowRight size={15}/></button><button className="button" onClick={() => switchScreen("Occasion")}><CalendarCheck size={14}/>Plan an occasion</button><button className="button" onClick={() => switchScreen("Closet")}>Open my closet</button></div>
           <div className="row" style={{ justifyContent: "start", gap: 10, marginTop: 25, flexWrap: "wrap" }}><span className="badge neutral"><Shirt size={13}/>{items.length} pieces</span><span className="badge neutral"><CalendarCheck size={13}/>{todayPlans.length} plans today</span><span className="badge neutral"><Heart size={13}/>{savedLooks.length} saved looks</span></div>
@@ -861,7 +865,8 @@ export function LookuApp() {
 
   function renderCloset() {
     return <>
-      <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">THE PIECES THAT MAKE YOU, YOU</span><h1 className="page-title serif">My closet.</h1><p className="page-subtitle">{items.length} pieces in your collection · {availableItems.length} ready to wear. Add items as you go; there's no need to photograph everything today.</p></div><button className="button primary" onClick={() => openModal("garment")}><Plus size={15}/>Add clothes</button></div>
+      <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">THE PIECES THAT MAKE YOU, YOU</span><h1 className="page-title serif">My closet.</h1><p className="page-subtitle">{items.length} pieces in your collection · {availableItems.length} ready to wear. Tap a few essentials you own, add a batch of photos, or edit pieces as you go. You don't need to photograph your whole wardrobe.</p></div><button className="button primary" onClick={() => openModal("garment")}><Plus size={15}/>Add clothes</button></div>
+      <QuickCloset userId={user.id} existing={items} onImported={async()=>{await loadData(user.id);showToast("Your quick closet is ready to style.");}} onPhotoUpload={()=>openModal("garment")}/>
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Wardrobe pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Clothing you own</span></div><div className="stat"><span className="stat-label">Ready to wear</span><div className="stat-number">{availableItems.length}</div><span className="stat-caption">Available for styling</span></div><div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Your personal outfit history</span></div></div>
       <div className="tool-row section" style={{ marginTop: 26 }}><div className="search-wrap"><Search/><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, brand or color…" aria-label="Search wardrobe"/></div><button className="button" onClick={() => setFilter(filter==="All"?"Tops":"All")}><SlidersHorizontal size={14}/>{filter==="All"?"Filter":"Clear filter"}</button></div>
       <div className="filter-row">{categories.map(cat=><button key={cat} className={"filter-pill "+(filter===cat?"active":"")} onClick={()=>setFilter(cat)}>{cat}{cat==="All"?" ("+items.length+")":""}</button>)}</div>
