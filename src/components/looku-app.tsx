@@ -19,7 +19,7 @@ import { WardrobeCapture } from "@/components/wardrobe-capture";
 import { ShoppingJournal } from "@/components/shopping-journal";
 import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
-import { greetingForHour } from "@/lib/greeting";
+
 import { TryOnRoom } from "@/components/tryon-room";
 
 type Screen = "Today" | "Closet" | "Stylist" | "Occasion" | "TryOn" | "Plan" | "Looks" | "Community" | "Shop" | "Insights" | "Settings";
@@ -308,10 +308,7 @@ export function LookuApp() {
   const savedLooks = useMemo(() => outfits.filter(o => o.status === "saved" || o.status === "planned" || o.status === "worn"), [outfits]);
   const todayPlans = useMemo(() => plans.filter(p => p.plan_date === todayIso()), [plans]);
   const styleName = String(profile.style_preferences?.style || "Relaxed minimal");
-  const greetingName = (profile.full_name || user?.name || "there").split(" ")[0];
-  const [localHour,setLocalHour] = useState<number | null>(null);
-  useEffect(() => { const update=()=>setLocalHour(new Date().getHours()); update(); const onVisible=()=>{if(document.visibilityState==="visible")update();}; document.addEventListener("visibilitychange",onVisible); window.addEventListener("focus",update); const clock=window.setInterval(update,60000); return ()=>{window.clearInterval(clock);window.removeEventListener("focus",update);document.removeEventListener("visibilitychange",onVisible);}; }, []);
-  const timeGreeting = greetingForHour(localHour);
+
 
 
   function switchScreen(next: Screen) { setScreen(next); setMoreOpen(false); setModal(null); setLookMenu(null); window.scrollTo({ top: 0, behavior: "smooth" }); }
