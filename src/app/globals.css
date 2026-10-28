@@ -160,7 +160,7 @@
 :root:not([data-looku-theme="light"]) .filter-pill.active{background:#f1f2f4!important;color:#111214!important}
 :root:not([data-looku-theme="light"]) .nav-link:hover,
 :root:not([data-looku-theme="light"]) .looku-prompt-chip:hover{background:#24262a!important}
-:root:not([data-looku-theme="light"]) .privacy-banner{background:#222820!important;color:#d2dfc9!important}
+
 :root:not([data-looku-theme="light"]) .notice{background:#2d211c!important;color:#f0d3c2!important}
 :root:not([data-looku-theme="light"]) .empty-state{background:#17181b!important}
 :root:not([data-looku-theme="light"]) .tag{background:#25262a!important;color:#c2c2c8!important}
