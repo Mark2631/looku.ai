@@ -1012,10 +1012,8 @@ export function LookuApp() {
     const savedAndLiked = outfits.filter(outfit => outfit.status === "saved" || outfit.status === "planned" || likedOutfitIds.includes(outfit.id)).slice(0, 8);
     const latestSaved = savedAndLiked.length > 0 ? savedAndLiked : savedLooks.slice(0, 6);
     return <div className="looku-chat-home">
-      <section className="looku-home-intro">
-        <span className="eyebrow">{formatDate(todayIso(), { weekday: "long", month: "long", day: "numeric" })} · YOUR PERSONAL STYLE SPACE</span>
-        <h1 className="looku-home-title">{timeGreeting}, {greetingName}.<br/>What are we wearing?</h1>
-        <p className="looku-home-subtitle">Describe the moment, your mood, or one piece you want to wear. I’ll help you make a look that feels like you.</p>
+      <section className="looku-home-intro looku-home-intro-compact">
+        <h1 className="looku-home-title">What are we wearing?</h1>
       </section>
 
       {chat.length > 1 && <section className="looku-home-thread" aria-live="polite">
@@ -1034,7 +1032,7 @@ export function LookuApp() {
 
       <section className="looku-section" aria-label="Today's outfit selection">
         <div className="looku-section-head">
-          <div><h2>Today’s selection</h2><p>{generated.length ? "Your latest wardrobe-aware suggestions." : "Looks built around your own clothes, not imaginary inventory."}</p></div>
+          <div><h2>Today’s selection</h2><p>{generated.length ? "Your latest wardrobe-aware suggestions." : "Your latest looks"}</p></div>
           <button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>Lookbook <ArrowRight size={13}/></button>
         </div>
         {generated.length > 0 ? <div className="looku-shelf-row">
@@ -1163,8 +1161,8 @@ export function LookuApp() {
       {loadingData ? <div className="garment-grid">{[1,2,3,4].map(n=><div key={n} className="garment-card"><div className="skeleton" style={{height:210}}/><div style={{padding:13}}><div className="skeleton" style={{height:12,width:"70%"}}/><div className="skeleton" style={{height:10,width:"45%",marginTop:10}}/></div></div>)}</div> : filteredItems.length ? <div className="garment-grid">{filteredItems.map(item=><article className="garment-card" key={item.id}>
         {item.image_url ? <img className="garment-image" src={item.image_url} alt={item.name} loading="lazy"/> : <div className="garment-image" style={{ display: "grid", placeItems: "center" }}><Shirt size={35} color="#8c8f82"/></div>}
         <div className="garment-content"><div className="row" style={{ gap: 5 }}><h3 title={item.name}>{item.name}</h3><span className={"tag"}>{item.status==="available"?"Ready":item.status==="laundry"?"Laundry":"Retired"}</span></div><p>{item.brand ? item.brand+" · " : ""}{item.category} · {(item.colors||[]).join(", ")||"Color not set"}</p>{safeExternalUrl(String(item.attributes?.productUrl||""))&&<a className="text-action" style={{display:"inline-block",marginTop:7}} href={safeExternalUrl(String(item.attributes?.productUrl||""))||undefined} target="_blank" rel="noreferrer">Product source <ExternalLink size={11} style={{display:"inline"}}/></a>}<div className="tool-row"><button className="button compact" onClick={()=>{ setMood("Style the garment named "+item.name+" ("+item.category+"). Keep this piece in the outfit."); setScreen("Stylist"); void generateLooks("Style the garment named "+item.name+" and keep it in the outfit.", occasion); }}><Sparkles size={12}/>Style</button><button className="icon-button" title="Edit garment details" onClick={()=>openEditGarment(item)} style={{height:32,width:32}}><Pencil size={14}/></button><button className="icon-button" title={item.status==="available"?"Mark as in laundry":"Mark ready to wear"} onClick={()=>void toggleGarmentStatus(item)} style={{height:32,width:32}}>{item.status==="available"?<Clock3 size={14}/>:<Check size={14}/>}</button><button className="icon-button" title="Remove garment" onClick={()=>void removeGarment(item)} style={{height:32,width:32}}><Trash2 size={14}/></button></div></div>
-      </article>)}</div> : <EmptyState icon={Shirt} title={search || filter!=="All" ? "No pieces match this view." : "Your closet should feel like yours."} body={search || filter!=="All" ? "Try another search or category." : "Add real clothes you own. LOOKU keeps them private, recognizes their attributes where AI is available, and uses available pieces when building outfits."} action={search || filter!=="All" ? "Clear filters" : "Add your first garment"} onAction={()=>search || filter!=="All" ? (setSearch(""),setFilter("All")) : openModal("garment")}/>}
-      <div className="privacy-banner section"><LockKeyhole/><span><strong>Private by default.</strong> Garment images are stored in a private bucket and delivered with short-lived signed URLs. Only your account can access your wardrobe.</span></div>
+      </article>)}</div> : <EmptyState icon={Shirt} title={search || filter!=="All" ? "No pieces match this view." : "Your closet should feel like yours."} body={search || filter!=="All" ? "Try another search or category." : "Add a few pieces you own to start building looks."} action={search || filter!=="All" ? "Clear filters" : "Add your first garment"} onAction={()=>search || filter!=="All" ? (setSearch(""),setFilter("All")) : openModal("garment")}/>}
+      
     </>;
   }
 
@@ -1341,9 +1339,9 @@ export function LookuApp() {
     </>;
   }
 
-  if (!ready) return <div className="loading-screen"><div><div className="loading-mark">looku<span style={{color:"var(--sage-dark)"}}>.</span></div><div className="spinner"/><p className="small muted">Preparing your personal style space…</p></div></div>;
+  if (!ready) return null;
 
-  if (!configured) return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:22}}><div style={{maxWidth:680,width:"100%"}}><Link href="/" className="wordmark">looku<span className="dot">.</span></Link><p className="tagline">YOUR STYLE, UNDERSTOOD.</p><div className="surface" style={{padding:30,marginTop:25}}><span className="badge warn"><CircleAlert size={13}/> Backend connection required</span><h1 className="page-title serif" style={{marginTop:18}}>Your style space is ready to be connected.</h1><p className="page-subtitle">LOOKU is deployed, but production accounts, cloud wardrobe storage and persistent data are deliberately not simulated. Connect a dedicated Supabase project to activate the app.</p><div className="stack" style={{marginTop:24}}><div className="row"><span className="small">Authentication and private data</span><span className="badge warn">Not configured</span></div><div className="row"><span className="small">AI stylist and image recognition</span><span className="badge neutral">Needs model access</span></div><div className="row"><span className="small">Retail catalog</span><span className="badge neutral">Awaiting approved feeds</span></div></div><div className="divider"/><p className="small muted" style={{lineHeight:1.7}}>Deployment environment variables required: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY. Do not put the service-role key in browser code.</p><a className="button primary" href="https://supabase.com/dashboard" target="_blank" rel="noreferrer">Open Supabase setup <ExternalLink size={14}/></a></div></div></main>;
+  if (!configured) return <main className="auth-shell"><div className="auth-card"><Link href="/" className="wordmark">looku<span className="dot">.</span></Link><h1 className="page-title serif">Looku is taking a short break.</h1><p className="page-subtitle">Your style space is temporarily unavailable. Please try again shortly.</p></div></main>;
 
   if (!user) return <main className="auth-shell"><aside className="auth-art"><img src={heroImage} alt="Fashion editorial inspiration"/><div className="auth-art-copy"><div className="eyebrow" style={{color:"#fff"}}>YOUR CLOSET, UNDERSTOOD</div><h1>Get dressed<br/>with intention.</h1><p style={{fontSize:13,lineHeight:1.7,maxWidth:360}}>Your clothes, your day, one thoughtful look. Start with what you already own.</p></div></aside><section className="auth-panel"><div className="wordmark">looku<span className="dot">.</span></div><p className="tagline">YOUR STYLE, UNDERSTOOD.</p><h2>Your personal style space.</h2><p className="auth-desc">Sign in to keep your wardrobe, outfit plans, saved looks and style preferences in one private place.</p><a className="button primary" href="/auth" style={{width:"100%",minHeight:48}}>Sign in <ArrowRight size={15}/></a><a className="button" href="/auth?mode=signup" style={{width:"100%",marginTop:10,minHeight:48}}>Create an account</a><div className="privacy-banner" style={{marginTop:25}}><LockKeyhole/><span>Your wardrobe is private by default. We never need to publish your outfit photos to make styling useful.</span></div></section></main>;
 
@@ -1376,7 +1374,7 @@ export function LookuApp() {
           <button className="looku-composer-send" type="submit" disabled={styling || !chatInput.trim()} aria-label="Create look" title="Create look">{styling ? <LoaderCircle size={17} className="spin-icon"/> : <ArrowRight size={18}/>}</button>
         </div>
       </form>
-      <div className="looku-composer-hint">LOOKU uses your saved wardrobe and style preferences to make suggestions.</div>
+      
     </div>}
 
     {moreOpen && <div className="looku-drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setMoreOpen(false); }}>
