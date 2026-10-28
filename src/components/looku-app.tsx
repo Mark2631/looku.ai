@@ -1032,7 +1032,7 @@ export function LookuApp() {
 
       <section className="looku-section" aria-label="Today's outfit selection">
         <div className="looku-section-head">
-          <div><h2>Today’s selection</h2><p>{generated.length ? "Your latest wardrobe-aware suggestions." : "Your latest looks"}</p></div>
+          <div><h2>Today’s selection</h2></div>
           <button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>Lookbook <ArrowRight size={13}/></button>
         </div>
         {generated.length > 0 ? <div className="looku-shelf-row">
@@ -1081,11 +1081,11 @@ export function LookuApp() {
               </div>
             </article>;
           })}
-        </div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Your first selection starts with a prompt.</strong>Tell me what you’re dressing for. Add two wardrobe items to generate complete outfits from pieces you really own.</div><button className="button compact" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }}><Plus size={13}/>Add clothes</button></div>}
+        </div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Start with a prompt.</strong></div><button className="button compact" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }}><Plus size={13}/>Add clothes</button></div>}
       </section>
 
       <section className="looku-section" aria-label="Outfit memories">
-        <div className="looku-section-head"><div><h2>Memories</h2><p>The looks you’ve actually worn and want to remember.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
+        <div className="looku-section-head"><div><h2>Memories</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
         {memories.length ? <div className="looku-shelf-row">{memories.map(outfit => {
           const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
           const menuId = "memory-" + outfit.id;
@@ -1104,11 +1104,11 @@ export function LookuApp() {
               </div>}
             </div>
           </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Your style memories will build as you go.</strong>Save a look you love or record an outfit you actually wore.</div><button className="button compact" type="button" onClick={() => openModal("look")}><Plus size={13}/>Record a look</button></div>}
+        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>No memories yet.</strong></div><button className="button compact" type="button" onClick={() => openModal("look")}><Plus size={13}/>Record a look</button></div>}
       </section>
 
       <section className="looku-section" aria-label="Saved and liked looks">
-        <div className="looku-section-head"><div><h2>Saved & liked</h2><p>Your shortlist of looks to revisit, repeat, or plan.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
+        <div className="looku-section-head"><div><h2>Saved & liked</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
         {savedAndLiked.length ? <div className="looku-shelf-row">{savedAndLiked.map(outfit => {
           const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
           const menuId = "favourite-" + outfit.id;
@@ -1128,11 +1128,11 @@ export function LookuApp() {
               </div>}
             </div>
           </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Keep the looks that feel like you.</strong>Use the bookmark on any selection to save it here.</div><button className="button compact" type="button" onClick={() => switchScreen("Looks")}><Bookmark size={13}/>Open lookbook</button></div>}
+        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>No saved looks yet.</strong></div><button className="button compact" type="button" onClick={() => switchScreen("Looks")}><Bookmark size={13}/>Open lookbook</button></div>}
       </section>
 
       <section className="looku-section" aria-label="Store picks">
-        <div className="looku-section-head"><div><h2>Store</h2><p>Real, approved product listings—never made-up inventory.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Shop")}>Browse store <ArrowRight size={13}/></button></div>
+        <div className="looku-section-head"><div><h2>Store</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Shop")}>Browse store <ArrowRight size={13}/></button></div>
         {products.length ? <div className="looku-shelf-row">{products.slice(0, 10).map(product => {
           const imageUrl = product.image_url ? safeExternalUrl(product.image_url) : null;
           const productUrl = safeExternalUrl(product.affiliate_url) || safeExternalUrl(product.product_url);
@@ -1140,7 +1140,7 @@ export function LookuApp() {
             {productUrl ? <a href={productUrl} target="_blank" rel="sponsored noopener noreferrer" aria-label={"View " + product.title}>{imageUrl ? <img className="looku-product-image" src={imageUrl} alt={product.title} loading="lazy"/> : <div className="looku-product-placeholder"><ShoppingBag size={24}/></div>}</a> : <div>{imageUrl ? <img className="looku-product-image" src={imageUrl} alt={product.title} loading="lazy"/> : <div className="looku-product-placeholder"><ShoppingBag size={24}/></div>}</div>}
             <div className="looku-product-info"><strong title={product.title}>{product.title}</strong><span>{product.currency} {product.price === null ? "Price at store" : Number(product.price).toLocaleString()}</span></div>
           </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>The store is being curated.</strong>Approved products will appear here when reviewed merchant listings are available.</div><button className="button compact" type="button" onClick={() => switchScreen("Shop")}><ShoppingBag size={13}/>Explore store</button></div>}
+        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Nothing here yet.</strong></div><button className="button compact" type="button" onClick={() => switchScreen("Shop")}><ShoppingBag size={13}/>Explore store</button></div>}
       </section>
 
       {todayPlans.length > 0 && <section className="looku-section"><div className="looku-section-head"><div><h2>On your calendar today</h2><p>Outfits you’ve already planned.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Plan")}>Calendar <ArrowRight size={13}/></button></div><div className="stack">{todayPlans.slice(0, 3).map(plan => <div className="outfit-row" key={plan.id}><div style={{minWidth:0,flex:1}}><strong>{plan.event_title}</strong><small>{plan.occasion} · {formatDate(plan.plan_date)}</small></div><button className="looku-card-action" onClick={() => openModal("plan", plan.outfit_id, plan.plan_date)} aria-label={"Edit " + plan.event_title}><Pencil size={14}/></button></div>)}</div></section>}
@@ -1158,7 +1158,7 @@ export function LookuApp() {
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Wardrobe pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Clothing you own</span></div><div className="stat"><span className="stat-label">Ready to wear</span><div className="stat-number">{availableItems.length}</div><span className="stat-caption">Available for styling</span></div><div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Your personal outfit history</span></div></div>
       <div className="tool-row section" style={{ marginTop: 26 }}><div className="search-wrap"><Search/><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, brand or color…" aria-label="Search wardrobe"/></div><button className="button" onClick={() => setFilter(filter==="All"?"Tops":"All")}><SlidersHorizontal size={14}/>{filter==="All"?"Filter":"Clear filter"}</button></div>
       <div className="filter-row">{categories.map(cat=><button key={cat} className={"filter-pill "+(filter===cat?"active":"")} onClick={()=>setFilter(cat)}>{cat}{cat==="All"?" ("+items.length+")":""}</button>)}</div>
-      {loadingData ? <div className="garment-grid">{[1,2,3,4].map(n=><div key={n} className="garment-card"><div className="skeleton" style={{height:210}}/><div style={{padding:13}}><div className="skeleton" style={{height:12,width:"70%"}}/><div className="skeleton" style={{height:10,width:"45%",marginTop:10}}/></div></div>)}</div> : filteredItems.length ? <div className="garment-grid">{filteredItems.map(item=><article className="garment-card" key={item.id}>
+      {loadingData ? <p className="muted small" role="status">Loading your wardrobe…</p> : filteredItems.length ? <div className="garment-grid">{filteredItems.map(item=><article className="garment-card" key={item.id}>
         {item.image_url ? <img className="garment-image" src={item.image_url} alt={item.name} loading="lazy"/> : <div className="garment-image" style={{ display: "grid", placeItems: "center" }}><Shirt size={35} color="#8c8f82"/></div>}
         <div className="garment-content"><div className="row" style={{ gap: 5 }}><h3 title={item.name}>{item.name}</h3><span className={"tag"}>{item.status==="available"?"Ready":item.status==="laundry"?"Laundry":"Retired"}</span></div><p>{item.brand ? item.brand+" · " : ""}{item.category} · {(item.colors||[]).join(", ")||"Color not set"}</p>{safeExternalUrl(String(item.attributes?.productUrl||""))&&<a className="text-action" style={{display:"inline-block",marginTop:7}} href={safeExternalUrl(String(item.attributes?.productUrl||""))||undefined} target="_blank" rel="noreferrer">Product source <ExternalLink size={11} style={{display:"inline"}}/></a>}<div className="tool-row"><button className="button compact" onClick={()=>{ setMood("Style the garment named "+item.name+" ("+item.category+"). Keep this piece in the outfit."); setScreen("Stylist"); void generateLooks("Style the garment named "+item.name+" and keep it in the outfit.", occasion); }}><Sparkles size={12}/>Style</button><button className="icon-button" title="Edit garment details" onClick={()=>openEditGarment(item)} style={{height:32,width:32}}><Pencil size={14}/></button><button className="icon-button" title={item.status==="available"?"Mark as in laundry":"Mark ready to wear"} onClick={()=>void toggleGarmentStatus(item)} style={{height:32,width:32}}>{item.status==="available"?<Clock3 size={14}/>:<Check size={14}/>}</button><button className="icon-button" title="Remove garment" onClick={()=>void removeGarment(item)} style={{height:32,width:32}}><Trash2 size={14}/></button></div></div>
       </article>)}</div> : <EmptyState icon={Shirt} title={search || filter!=="All" ? "No pieces match this view." : "Your closet should feel like yours."} body={search || filter!=="All" ? "Try another search or category." : "Add a few pieces you own to start building looks."} action={search || filter!=="All" ? "Clear filters" : "Add your first garment"} onAction={()=>search || filter!=="All" ? (setSearch(""),setFilter("All")) : openModal("garment")}/>}
@@ -1245,7 +1245,7 @@ export function LookuApp() {
   function renderShop() {
     return <>
       <div><span className="eyebrow">BUY WITH INTENTION</span><h1 className="page-title serif">The curated shop.</h1><p className="page-subtitle">Shop for a genuine gap in your wardrobe. Approved products appear when licensed merchant feeds are live; meanwhile, browse researched Kenyan retailers below.</p></div>
-      <div className="privacy-banner section"><ShieldCheck/><span><strong>No fake inventory.</strong> Prices and stock are not invented. The storefront will show only products with a reviewed source, permission to display their media, and a working merchant destination.</span></div>
+      
       {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2><p className="section-note">Only your allow-listed admin account can manage these records.</p></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
         {adminProducts.length ? <div className="stack" style={{marginTop:15}}>{adminProducts.map(p=><div className="outfit-row" key={p.id}>{p.image_url?<img src={p.image_url} alt=""/>:<div className="avatar"><ShoppingBag size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{p.title}</strong><small>{p.merchant} · {p.currency} {p.price ?? "price not set"}</small><div className="tool-row" style={{marginTop:7}}><button className="button compact" onClick={()=>void toggleProduct(p,"is_active")}>{p.is_active?"Hide":"Activate"}</button><button className="button compact" onClick={()=>void toggleProduct(p,"is_approved")}>{p.is_approved?"Unapprove":"Approve"}</button><button className="button compact" onClick={()=>void deleteProduct(p)}><Trash2 size={12}/>Delete</button></div></div><span className="badge neutral">{p.is_approved?"Approved":"Pending"}</span></div>)}</div> : <p className="small muted" style={{marginTop:12}}>No catalog items have been added yet.</p>}</section>}
       <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">A considered edit, not endless scrolling.</h2></div></div>
@@ -1343,7 +1343,7 @@ export function LookuApp() {
 
   if (!configured) return <main className="auth-shell"><div className="auth-card"><Link href="/" className="wordmark">looku<span className="dot">.</span></Link><h1 className="page-title serif">Looku is taking a short break.</h1><p className="page-subtitle">Your style space is temporarily unavailable. Please try again shortly.</p></div></main>;
 
-  if (!user) return <main className="auth-shell"><aside className="auth-art"><img src={heroImage} alt="Fashion editorial inspiration"/><div className="auth-art-copy"><div className="eyebrow" style={{color:"#fff"}}>YOUR CLOSET, UNDERSTOOD</div><h1>Get dressed<br/>with intention.</h1><p style={{fontSize:13,lineHeight:1.7,maxWidth:360}}>Your clothes, your day, one thoughtful look. Start with what you already own.</p></div></aside><section className="auth-panel"><div className="wordmark">looku<span className="dot">.</span></div><p className="tagline">YOUR STYLE, UNDERSTOOD.</p><h2>Your personal style space.</h2><p className="auth-desc">Sign in to keep your wardrobe, outfit plans, saved looks and style preferences in one private place.</p><a className="button primary" href="/auth" style={{width:"100%",minHeight:48}}>Sign in <ArrowRight size={15}/></a><a className="button" href="/auth?mode=signup" style={{width:"100%",marginTop:10,minHeight:48}}>Create an account</a><div className="privacy-banner" style={{marginTop:25}}><LockKeyhole/><span>Your wardrobe is private by default. We never need to publish your outfit photos to make styling useful.</span></div></section></main>;
+  if (!user) return <main className="auth-shell"><aside className="auth-art"><img src={heroImage} alt="Fashion editorial inspiration"/><div className="auth-art-copy"><div className="eyebrow" style={{color:"#fff"}}>YOUR CLOSET, UNDERSTOOD</div><h1>Get dressed<br/>with intention.</h1><p style={{fontSize:13,lineHeight:1.7,maxWidth:360}}>Your clothes, your day, one thoughtful look. Start with what you already own.</p></div></aside><section className="auth-panel"><div className="wordmark">looku<span className="dot">.</span></div><p className="tagline">YOUR STYLE, UNDERSTOOD.</p><h2>Your personal style space.</h2><p className="auth-desc">Sign in to keep your wardrobe, outfit plans, saved looks and style preferences in one private place.</p><a className="button primary" href="/auth" style={{width:"100%",minHeight:48}}>Sign in <ArrowRight size={15}/></a><a className="button" href="/auth?mode=signup" style={{width:"100%",marginTop:10,minHeight:48}}>Create an account</a></section></main>;
 
   const currentNav = navItems.find(n => n.id === screen);
   const content = screen === "Today" ? renderToday() : screen === "Closet" ? renderCloset() : screen === "Stylist" ? renderStylist() : screen === "Occasion" ? renderOccasionStudio() : screen === "TryOn" ? renderTryOn() : screen === "Plan" ? renderPlanner() : screen === "Looks" ? renderLooks() : screen === "Community" ? renderCommunity() : screen === "Shop" ? renderShop() : screen === "Insights" ? renderInsights() : renderSettings();
