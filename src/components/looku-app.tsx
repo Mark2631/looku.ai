@@ -188,6 +188,10 @@ export function LookuApp() {
           const { data } = await supabase.storage.from("wardrobe-private").createSignedUrl(item.image_path, 3600);
           imageUrl = data?.signedUrl || null;
         }
+        // Curated demo pieces use public reference images; real private wardrobe uploads take priority.
+        if (!imageUrl && typeof item.attributes?.demoImageUrl === "string") {
+          imageUrl = item.attributes.demoImageUrl;
+        }
         return { ...item, image_url: imageUrl };
       }));
       setItems(mappedItems);
