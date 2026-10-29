@@ -14,9 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
-import { RetailDiscover } from "@/components/retail-discover";
 import { WardrobeCapture } from "@/components/wardrobe-capture";
-import { ShoppingJournal } from "@/components/shopping-journal";
 import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
 
@@ -126,8 +124,6 @@ export function LookuApp() {
   const [generated, setGenerated] = useState<OutfitIdea[]>([]);
   const [styling, setStyling] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [stylingMethod, setStylingMethod] = useState<"ai" | "wardrobe-rules" | null>(null);
-  const [stylingNotice, setStylingNotice] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([{ role: "assistant", text: "Tell me where you're going, what mood you're after, or which item you want to wear. I'll build around pieces in your actual wardrobe." }]);
   const [chatInput, setChatInput] = useState("");
   const [modal, setModal] = useState<Modal>(null);
@@ -372,7 +368,7 @@ export function LookuApp() {
 
   async function generateLooks(prompt: string, requestedOccasion = occasion, fromChat = false) {
     if (availableItems.length < 2) { showToast("Add at least two available items to get started."); switchScreen("Closet"); return; }
-    setStyling(true); setAiError(""); setStylingNotice("");
+    setStyling(true); setAiError("");
     try {
       const now = currentTime;
       const upcomingEvents = calendarEvents.filter(event => {
@@ -391,9 +387,7 @@ export function LookuApp() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The stylist couldn't complete that request.");
       setGenerated(data.outfits || []);
-      setStylingMethod(data.method === "ai" ? "ai" : "wardrobe-rules");
-      setStylingNotice(typeof data.notice === "string" ? data.notice : "");
-      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.method === "wardrobe-rules" ? "I matched " : "I styled ") + (data.outfits || []).length + " look(s) from your real available clothes. " + (data.notice || "You can save a look or ask for adjustments.") }]);
+      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.outfits || []).length === 1 ? "Here’s a look from your wardrobe. You can ask me to change the colour, mood or level of formality." : "Here are a few outfit options from your wardrobe. Tell me which one feels closest, or what you want changed." }]);
       showToast("Your wardrobe edit is ready.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "The stylist is unavailable.";
@@ -1128,16 +1122,13 @@ export function LookuApp() {
 
   function renderShop() {
     return <>
-      <div><span className="eyebrow">BUY WITH INTENTION</span><h1 className="page-title serif">The curated shop.</h1><p className="page-subtitle">Shop for a genuine gap in your wardrobe. Approved products appear when licensed merchant feeds are live; meanwhile, browse researched Kenyan retailers below.</p></div>
+      <div><h1 className="page-title serif">Store</h1></div>
       
-      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2><p className="section-note">Only your allow-listed admin account can manage these records.</p></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
+      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
         {adminProducts.length ? <div className="stack" style={{marginTop:15}}>{adminProducts.map(p=><div className="outfit-row" key={p.id}>{p.image_url?<img src={p.image_url} alt=""/>:<div className="avatar"><ShoppingBag size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{p.title}</strong><small>{p.merchant} · {p.currency} {p.price ?? "price not set"}</small><div className="tool-row" style={{marginTop:7}}><button className="button compact" onClick={()=>void toggleProduct(p,"is_active")}>{p.is_active?"Hide":"Activate"}</button><button className="button compact" onClick={()=>void toggleProduct(p,"is_approved")}>{p.is_approved?"Unapprove":"Approve"}</button><button className="button compact" onClick={()=>void deleteProduct(p)}><Trash2 size={12}/>Delete</button></div></div><span className="badge neutral">{p.is_approved?"Approved":"Pending"}</span></div>)}</div> : <p className="small muted" style={{marginTop:12}}>No catalog items have been added yet.</p>}</section>}
-      <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">A considered edit, not endless scrolling.</h2></div></div>
-        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="We're curating the first collection." body="Retail listings will appear once merchants and product-image permissions are verified. You can still save individual product links to your wishlist." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
+      <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">Shop clothes you like.</h2></div></div>
+        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="No products yet." body="Check back soon." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
       </section>
-      <RetailDiscover wardrobe={items} style={styleName} onSaveWishlist={saveOccasionWishlist}/>
-      {user && <ShoppingJournal userId={user.id}/>}
-      <section className="section surface soft"><div className="row" style={{alignItems:"start"}}><div><span className="eyebrow">ARE YOU A BRAND OR A SHOP?</span><h2 className="section-title">Make your products part of someone's style.</h2><p className="section-note" style={{maxWidth:490}}>Request a partnership to discuss a product feed, image permissions, stock updates and referral terms. We review all merchants before publishing.</p></div><Store size={27}/></div><button className="button" style={{marginTop:17}} onClick={()=>openModal("merchant")}>Apply as a merchant <ArrowRight size={14}/></button></section>
     </>;
   }
 
@@ -1196,9 +1187,9 @@ export function LookuApp() {
   function renderSettings() {
     const prefs=profile.style_preferences||{};
     return <>
-      <div><span className="eyebrow">YOUR SPACE, YOUR RULES</span><h1 className="page-title serif">Preferences.</h1><p className="page-subtitle">Tell LOOKU what feels right. Your feedback and preferences guide recommendations, but you can change them whenever you like.</p></div>
+      <div><h1 className="page-title serif">Preferences</h1></div>
       <section className="surface looku-theme-panel" aria-label="Appearance preferences">
-        <div><h2>Appearance</h2><p>Looku opens in dark mode. You can switch to light mode any time.</p></div>
+        <div><h2>Appearance</h2></div>
         <div className="looku-theme-options">
           <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => setLookuTheme("dark")} aria-pressed={theme === "dark"}><Moon size={14}/>Dark</button>
           <button type="button" className={theme === "light" ? "active" : ""} onClick={() => setLookuTheme("light")} aria-pressed={theme === "light"}><Sun size={14}/>Light</button>
@@ -1214,10 +1205,8 @@ export function LookuApp() {
           <button className="button primary" type="submit" disabled={savingProfile}>{savingProfile?"Saving…":"Save preferences"}</button>
         </form>
         <aside className="stack">
-          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><p className="small muted" style={{lineHeight:1.7}}>Account authenticated through Supabase. Wardrobe images are stored in private object storage; the browser only receives short-lived signed URLs.</p><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button><button className="button danger" style={{width:"100%",marginTop:9}} onClick={()=>void deleteAccount()}><Trash2 size={14}/>Delete account and data</button></div>
-          <div className="surface soft"><span className="eyebrow">YOUR AI ALLOWANCE</span><h3 style={{fontSize:23,fontWeight:500,margin:"10px 0 5px"}}>10 AI operations per day</h3><p className="small muted" style={{lineHeight:1.6}}>The backend applies a per-user daily limit to help control model costs. Image recognition and styling use the same allowance.</p></div>
-          <div className="surface"><span className="eyebrow">PRIVACY AND CONTROL</span><p className="small muted" style={{lineHeight:1.7}}>You can remove wardrobe items, delete saved looks and export your metadata. You can delete your account from this screen. The secure server-side flow confirms your email, removes private photos, and deletes account records.</p><a className="text-action" href="https://www.odpc.go.ke/" target="_blank" rel="noreferrer">Kenya data protection authority <ExternalLink size={11} style={{display:"inline"}}/></a></div>
-          {admin&&<div className="surface"><span className="eyebrow">INTERNAL TOOLS</span><h3 style={{margin:"8px 0",fontWeight:500}}>Catalog administration</h3><p className="small muted">You are allow-listed for catalog management. Add records, inspect review state and only publish products with authorized sources.</p><button className="button compact" onClick={()=>switchScreen("Shop")}>Open catalog tools</button></div>}
+          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button><button className="button danger" style={{width:"100%",marginTop:9}} onClick={()=>void deleteAccount()}><Trash2 size={14}/>Delete account and data</button></div>
+          {admin&&<div className="surface"><span className="eyebrow">INTERNAL TOOLS</span><h3 style={{margin:"8px 0",fontWeight:500}}>Catalog administration</h3><button className="button compact" onClick={()=>switchScreen("Shop")}>Open catalog tools</button></div>}
         </aside>
       </div>
     </>;
