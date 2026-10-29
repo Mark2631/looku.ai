@@ -32,6 +32,25 @@ describe("wardrobe matcher", () => {
     const looks=matchWardrobeOutfits([a,b,item("jeans","Bottoms"),item("shoes","Shoes")],"Campus",2,[],[],[],["red"]);
     expect(looks[0].itemIds).toContain("blue-top");
   });
+  it("prioritizes requested colors in the user's prompt", () => {
+    const red={...item("red-top","Tops"),colors:["red"]};
+    const blue={...item("blue-top","Tops"),colors:["blue"]};
+    const looks=matchWardrobeOutfits([red,blue,item("jeans","Bottoms")],"Everyday",2,[],[],[],[],"Please style me with the red top");
+    expect(looks[0].itemIds).toContain("red-top");
+  });
+  it("shows different outfit types before repeating similar separates combinations", () => {
+    const clothes=[
+      item("tee","Tops"),
+      item("jeans","Bottoms"),
+      item("second-bottom","Bottoms"),
+      item("dress","Dresses"),
+      item("shoes","Shoes"),
+    ];
+    const looks=matchWardrobeOutfits(clothes,"Campus",3);
+    expect(looks).toHaveLength(3);
+    expect(looks.some(look=>look.itemIds.includes("dress"))).toBe(true);
+    expect(new Set(looks.map(look=>look.itemIds.includes("dress") ? "dress" : "separates")).size).toBe(2);
+  });
   it("returns at most three unique combinations", () => {
     const clothes=[item("a","Tops"),item("b","Tops"),item("c","Bottoms"),item("d","Shoes")];
     const looks=matchWardrobeOutfits(clothes,"Birthday",3);

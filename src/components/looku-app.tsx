@@ -14,9 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { StyleInsights } from "@/components/style-insights";
 import { OccasionStudio } from "@/components/occasion-studio";
-import { RetailDiscover } from "@/components/retail-discover";
 import { WardrobeCapture } from "@/components/wardrobe-capture";
-import { ShoppingJournal } from "@/components/shopping-journal";
 import { StyleCommunity } from "@/components/style-community";
 import { ScanOutfit } from "@/components/scan-outfit";
 
@@ -127,7 +125,6 @@ export function LookuApp() {
   const [styling, setStyling] = useState(false);
   const [aiError, setAiError] = useState("");
   const [stylingMethod, setStylingMethod] = useState<"ai" | "wardrobe-rules" | null>(null);
-  const [stylingNotice, setStylingNotice] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([{ role: "assistant", text: "Tell me where you're going, what mood you're after, or which item you want to wear. I'll build around pieces in your actual wardrobe." }]);
   const [chatInput, setChatInput] = useState("");
   const [modal, setModal] = useState<Modal>(null);
@@ -187,6 +184,10 @@ export function LookuApp() {
         if (item.image_path) {
           const { data } = await supabase.storage.from("wardrobe-private").createSignedUrl(item.image_path, 3600);
           imageUrl = data?.signedUrl || null;
+        }
+        // Curated demo pieces use public reference images; real private wardrobe uploads take priority.
+        if (!imageUrl && typeof item.attributes?.demoImageUrl === "string") {
+          imageUrl = item.attributes.demoImageUrl;
         }
         return { ...item, image_url: imageUrl };
       }));
@@ -368,7 +369,7 @@ export function LookuApp() {
 
   async function generateLooks(prompt: string, requestedOccasion = occasion, fromChat = false) {
     if (availableItems.length < 2) { showToast("Add at least two available items to get started."); switchScreen("Closet"); return; }
-    setStyling(true); setAiError(""); setStylingNotice("");
+    setStyling(true); setAiError("");
     try {
       const now = currentTime;
       const upcomingEvents = calendarEvents.filter(event => {
@@ -388,8 +389,7 @@ export function LookuApp() {
       if (!response.ok) throw new Error(data.error || "The stylist couldn't complete that request.");
       setGenerated(data.outfits || []);
       setStylingMethod(data.method === "ai" ? "ai" : "wardrobe-rules");
-      setStylingNotice(typeof data.notice === "string" ? data.notice : "");
-      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.method === "wardrobe-rules" ? "I matched " : "I styled ") + (data.outfits || []).length + " look(s) from your real available clothes. " + (data.notice || "You can save a look or ask for adjustments.") }]);
+      if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.outfits || []).length === 1 ? "Here’s a look from your wardrobe. You can ask me to change the colour, mood or level of formality." : "Here are a few outfit options from your wardrobe. Tell me which one feels closest, or what you want changed." }]);
       showToast("Your wardrobe edit is ready.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "The stylist is unavailable.";
@@ -773,7 +773,7 @@ export function LookuApp() {
       const response = await fetch("/api/admin/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Couldn't add the product.");
-      setAdminProducts(prev => [result.product, ...prev]); setModal(null); showToast("Product saved. Admin approval is required before customers can see it.");
+      setAdminProducts(prev => [result.product, ...prev]); setModal(null); showToast("Product saved.");
     } catch (error) { setModalError(error instanceof Error ? error.message : "Couldn't add the product."); }
     finally { setModalBusy(false); }
   }
@@ -894,10 +894,9 @@ export function LookuApp() {
         <span className="badge neutral">LOOK {index + 1}</span>
       </div>
       <div className="outfit-composition">{pieces.map(item => <div className="piece-card" key={item.id}><img src={item.image_url || ""} alt={item.name} loading="lazy"/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category} · {(item.colors || []).slice(0,2).join(", ") || "Color not set"}</span><select aria-label={"Replace "+item.name} className="input" value={item.id} onChange={e=>replaceGeneratedPiece(index,item.id,e.target.value)} style={{padding:"7px",fontSize:10,marginTop:8}}>{availableItems.filter(candidate=>candidate.category===item.category&&(candidate.id===item.id||!idea.itemIds.includes(candidate.id))).map(candidate=><option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></div></div>)}</div>
-      {idea.confidenceNote && <p className="tiny muted" style={{ margin: "12px 0 0" }}>{idea.confidenceNote}</p>}
-      <p className="tiny muted" style={{margin:"9px 0 0"}}>Sharing is optional. Only outfit names and styling text are shared; your wardrobe photos and account stay private.</p>
+      
       <div className="tool-row" style={{ marginTop: 14 }}>
-        <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button><button className="button compact" onClick={()=>{ switchScreen("TryOn"); showToast("Choose an owned garment from this look to preview on your photo. Full multi-piece outfit rendering is not yet supported."); }}><Camera size={14}/>See on me</button>
+        <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button><button className="button compact" onClick={()=>{ switchScreen("TryOn"); showToast("Choose a garment from this look to preview on your photo."); }}><Camera size={14}/>See on me</button>
         <button className="button compact" onClick={() => void shareOutfitIdea(idea)}><ExternalLink size={14}/>Share outfit idea</button><button className="button compact" onClick={()=>void recordSuggestionFeedback(idea,"love")}><Heart size={13}/>Love this</button><button className="button compact" onClick={()=>void recordSuggestionFeedback(idea,"not-me")}><ThumbsDown size={13}/>Not my style</button>
         <button className="button compact" onClick={() => { setMood("Keep the idea but make it more relaxed."); void generateLooks("Keep the idea but make it more relaxed.", occasion); }}>More relaxed</button>
         <button className="button compact" onClick={() => { setMood("Keep the general style but make it more formal."); void generateLooks("Keep the general style but make it more formal.", occasion); }}>More formal</button>
@@ -937,7 +936,7 @@ export function LookuApp() {
           <label className="field">Main color<input className="input" name="color" placeholder="e.g. navy blue"/></label>
         </div>
         <label className="field">Brand (optional)<input className="input" name="brand" maxLength={120} placeholder="Brand or maker"/></label>
-        <label className="field">Original product page (optional)<small>If you own the garment, you can add it using only its product URL and a name. LOOKU does not copy retailer photography without permission.</small><input className="input" name="product_url" type="url" placeholder="https://…"/></label>
+        <label className="field">Original product page (optional)<input className="input" name="product_url" type="url" placeholder="https://…"/></label>
         <label className="field">Formality · <span className="muted">1 casual to 10 formal</span><input className="input" type="range" name="formality" min="1" max="10" defaultValue="5" style={{ padding: "7px 0", border: 0, boxShadow: "none" }}/></label>
         {modalError && <ErrorNotice>{modalError}</ErrorNotice>}
         <div className="modal-actions"><button type="button" className="button" onClick={close} disabled={modalBusy}>Cancel</button><button type="submit" className="button primary" disabled={modalBusy}>{modalBusy?<><LoaderCircle className="spin-icon" size={15}/> Saving…</>:<><Upload size={15}/>Save garment</>}</button></div>
@@ -1088,19 +1087,17 @@ export function LookuApp() {
     const monthLabel = start.toLocaleDateString(undefined,{month:"long",year:"numeric"});
     return <>
       <div className="row" style={{ alignItems:"start" }}><div><span className="eyebrow">MAKE ROOM FOR YOUR DAY</span><h1 className="page-title serif">Plan your looks.</h1><p className="page-subtitle">Schedule outfits around real events. Calendar integration can be enabled later with explicit read-only permission.</p></div><button className="button primary" onClick={()=>openModal("plan")}><Plus size={15}/>Plan an outfit</button></div>
-      <section className="surface section">
-        <div className="row" style={{ alignItems: "start" }}><div><span className="eyebrow">OPTIONAL CALENDAR CONNECTION</span><h2 className="section-title">Bring your day into LOOKU.</h2><p className="section-note">Read-only Google Calendar access helps you spot upcoming occasions. LOOKU never edits or deletes your Google events.</p></div><CalendarDays size={25}/></div>
+      {calendarStatus.configured && <section className="surface section">
+        <div className="row" style={{ alignItems: "start" }}><div><h2 className="section-title">Calendar</h2></div><CalendarDays size={25}/></div>
         <div className="tool-row" style={{ marginTop: 16 }}>
-          {!calendarStatus.configured ? <button className="button primary" disabled title="Server configuration is required"><CalendarDays size={14}/>Connect Google Calendar</button>
-            : calendarStatus.connected ? <><span className="badge"><Check size={12}/>Connected{calendarStatus.accountEmail ? " · "+calendarStatus.accountEmail : ""}</span><button className="button compact" onClick={()=>void refreshCalendarEvents()} disabled={calendarLoading}>{calendarLoading?"Refreshing…":"Refresh events"}</button><button className="button compact" onClick={()=>void disconnectCalendar()}>Disconnect</button></>
+          {calendarStatus.connected ? <><span className="badge"><Check size={12}/>Connected{calendarStatus.accountEmail ? " · "+calendarStatus.accountEmail : ""}</span><button className="button compact" onClick={()=>void refreshCalendarEvents()} disabled={calendarLoading}>{calendarLoading?"Refreshing…":"Refresh events"}</button><button className="button compact" onClick={()=>void disconnectCalendar()}>Disconnect</button></>
             : <a className="button primary" href="/api/calendar/connect"><CalendarDays size={14}/>Connect Google Calendar</a>}
         </div>
-        {!calendarStatus.configured && <p className="tiny muted" style={{ lineHeight: 1.7, margin: "12px 0 0" }}>Provider setup is required before connecting: Google OAuth client credentials, a private token-encryption key and the LOOKU server database credentials. No calendar permission is requested until you start the connection.</p>}
         {calendarMessage && <div style={{ marginTop: 12 }}><ErrorNotice>{calendarMessage}</ErrorNotice></div>}
         {calendarLoading && <p className="small muted" style={{ marginTop: 14 }}><LoaderCircle size={14} className="spin-icon" style={{ display:"inline",verticalAlign:"middle",marginRight:6 }}/>Loading upcoming events…</p>}
         {calendarStatus.connected && calendarEvents.length===0 && !calendarLoading && <p className="small muted" style={{ marginTop: 14 }}>No upcoming events were returned for the next 45 days.</p>}
         {calendarEvents.length>0 && <div className="stack" style={{ marginTop: 15 }}>{calendarEvents.map(event=><div className="outfit-row" key={event.id}><div className="avatar"><CalendarDays size={15}/></div><div style={{ minWidth:0, flex:1 }}><strong>{event.title}</strong><small>{formatDate(event.start.slice(0,10))}{event.start.includes("T")?" · "+new Date(event.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):" · All day"}{event.location?" · "+event.location:""}</small></div><button className="button compact" onClick={()=>void importCalendarEvent(event)} disabled={plans.some(p=>p.external_event_id===event.id)}>{plans.some(p=>p.external_event_id===event.id)?"Added":"Add to LOOKU"}</button></div>)}</div>}
-      </section>
+      </section>}
       <div className="stat-grid section"><div className="stat"><span className="stat-label">Today</span><div className="stat-number">{todayPlans.length}</div><span className="stat-caption">Planned events</span></div><div className="stat"><span className="stat-label">Upcoming</span><div className="stat-number">{plans.filter(p=>p.plan_date>=todayIso()).length}</div><span className="stat-caption">Future outfit plans</span></div><div className="stat"><span className="stat-label">Saved looks</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Ready to reuse</span></div></div>
       <section className="surface section"><div className="calendar-header"><button className="icon-button" aria-label="Previous month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()-1,1))}><ChevronLeft size={16}/></button><div style={{flex:1,textAlign:"center"}}><span className="eyebrow">YOUR CALENDAR</span><h2 className="section-title" style={{ marginTop: 7 }}>{monthLabel}</h2></div><button className="icon-button" aria-label="Next month" onClick={()=>setCalendarCursor(new Date(start.getFullYear(),start.getMonth()+1,1))}><ChevronRight size={16}/></button></div><div className="calendar-grid">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=><div key={d} className="eyebrow" style={{ textAlign:"center",paddingBottom:5 }}>{d}</div>)}{Array.from({length:first},(_,i)=><div key={"blank"+i}/>)}
         {Array.from({length:daysInMonth},(_,i)=>{const d=new Date(start.getFullYear(),start.getMonth(),i+1);const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0");const events=plans.filter(p=>p.plan_date===iso);return <button key={iso} className={"calendar-cell "+(iso===todayIso()?"today":"")} onClick={()=>{openModal("plan",null,iso);}} title={events.map(p=>p.event_title).join(", ")||"Plan this day"}><span className="day-label">{i+1}</span>{events.map(event=><span className="calendar-event" key={event.id}>{event.event_title}</span>)}</button>})}
@@ -1124,16 +1121,13 @@ export function LookuApp() {
 
   function renderShop() {
     return <>
-      <div><span className="eyebrow">BUY WITH INTENTION</span><h1 className="page-title serif">The curated shop.</h1><p className="page-subtitle">Shop for a genuine gap in your wardrobe. Approved products appear when licensed merchant feeds are live; meanwhile, browse researched Kenyan retailers below.</p></div>
+      <div><h1 className="page-title serif">Store</h1></div>
       
-      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2><p className="section-note">Only your allow-listed admin account can manage these records.</p></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
+      {admin&&<section className="surface section"><div className="row"><div><span className="eyebrow">MERCHANT CATALOG ADMIN</span><h2 className="section-title">Manage product listings</h2></div><button className="button primary" onClick={()=>openModal("product")}><Plus size={14}/>Add product</button></div>
         {adminProducts.length ? <div className="stack" style={{marginTop:15}}>{adminProducts.map(p=><div className="outfit-row" key={p.id}>{p.image_url?<img src={p.image_url} alt=""/>:<div className="avatar"><ShoppingBag size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{p.title}</strong><small>{p.merchant} · {p.currency} {p.price ?? "price not set"}</small><div className="tool-row" style={{marginTop:7}}><button className="button compact" onClick={()=>void toggleProduct(p,"is_active")}>{p.is_active?"Hide":"Activate"}</button><button className="button compact" onClick={()=>void toggleProduct(p,"is_approved")}>{p.is_approved?"Unapprove":"Approve"}</button><button className="button compact" onClick={()=>void deleteProduct(p)}><Trash2 size={12}/>Delete</button></div></div><span className="badge neutral">{p.is_approved?"Approved":"Pending"}</span></div>)}</div> : <p className="small muted" style={{marginTop:12}}>No catalog items have been added yet.</p>}</section>}
-      <section className="section"><div className="section-head"><div><span className="eyebrow">APPROVED PRODUCT CATALOGUE</span><h2 className="section-title">A considered edit, not endless scrolling.</h2></div></div>
-        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="We're curating the first collection." body="Retail listings will appear once merchants and product-image permissions are verified. You can still save individual product links to your wishlist." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
+      <section className="section"><div className="section-head"><div><h2 className="section-title">Shop clothes you like.</h2></div></div>
+        {products.length ? <div className="product-grid">{products.map(p=><article className="product-card" key={p.id}>{p.image_url&&safeExternalUrl(p.image_url)?<img src={p.image_url} alt={p.title} loading="lazy"/>:<div style={{height:210,background:"#efede6",display:"grid",placeItems:"center"}}><ShoppingBag size={30} color="#8a8f7f"/></div>}<div className="piece-info"><span className="badge neutral">{p.merchant}</span><strong style={{display:"block",marginTop:9}}>{p.title}</strong><div className="product-price">{p.price===null?"See merchant for price":p.currency+" "+Number(p.price).toLocaleString()}</div><p className="small muted" style={{lineHeight:1.55}}>{p.description||"Curated product listing."}</p><div className="tool-row"><a className="button compact primary" href={safeExternalUrl(p.affiliate_url)||safeExternalUrl(p.product_url)||undefined} target="_blank" rel="sponsored noopener noreferrer">View product <ArrowUpRight size={13}/></a><button className="button compact" onClick={()=>{openModal("wish");}}><Heart size={13}/></button></div></div></article>)}</div> : <EmptyState icon={ShoppingBag} title="No products yet." body="Check back soon." action="Save a shopping idea" onAction={()=>openModal("wish")}/>}
       </section>
-      <RetailDiscover wardrobe={items} style={styleName} onSaveWishlist={saveOccasionWishlist}/>
-      {user && <ShoppingJournal userId={user.id}/>}
-      <section className="section surface soft"><div className="row" style={{alignItems:"start"}}><div><span className="eyebrow">ARE YOU A BRAND OR A SHOP?</span><h2 className="section-title">Make your products part of someone's style.</h2><p className="section-note" style={{maxWidth:490}}>Request a partnership to discuss a product feed, image permissions, stock updates and referral terms. We review all merchants before publishing.</p></div><Store size={27}/></div><button className="button" style={{marginTop:17}} onClick={()=>openModal("merchant")}>Apply as a merchant <ArrowRight size={14}/></button></section>
     </>;
   }
 
@@ -1141,11 +1135,6 @@ export function LookuApp() {
     return <StyleInsights
       items={items}
       outfits={outfits}
-      integrationHealth={integrationHealth}
-      calendarConnected={calendarStatus.connected}
-      weatherConnected={Boolean(weather)}
-      weatherCitySet={Boolean(weatherCity)}
-      productCount={products.length}
       onStyleItem={(name) => {
         setMood("Build a look featuring " + name + ".");
         switchScreen("Stylist");
@@ -1192,9 +1181,9 @@ export function LookuApp() {
   function renderSettings() {
     const prefs=profile.style_preferences||{};
     return <>
-      <div><span className="eyebrow">YOUR SPACE, YOUR RULES</span><h1 className="page-title serif">Preferences.</h1><p className="page-subtitle">Tell LOOKU what feels right. Your feedback and preferences guide recommendations, but you can change them whenever you like.</p></div>
+      <div><h1 className="page-title serif">Preferences</h1></div>
       <section className="surface looku-theme-panel" aria-label="Appearance preferences">
-        <div><h2>Appearance</h2><p>Looku opens in dark mode. You can switch to light mode any time.</p></div>
+        <div><h2>Appearance</h2></div>
         <div className="looku-theme-options">
           <button type="button" className={theme === "dark" ? "active" : ""} onClick={() => setLookuTheme("dark")} aria-pressed={theme === "dark"}><Moon size={14}/>Dark</button>
           <button type="button" className={theme === "light" ? "active" : ""} onClick={() => setLookuTheme("light")} aria-pressed={theme === "light"}><Sun size={14}/>Light</button>
@@ -1202,7 +1191,7 @@ export function LookuApp() {
       </section>
       <div className="stylist-layout section">
         <form className="surface" onSubmit={savePreferences}>
-          <span className="eyebrow">YOUR PROFILE</span><label className="field" style={{marginTop:18}}>Display name<input className="input" name="full_name" defaultValue={profile.full_name||user?.name||""} maxLength={100}/></label>
+          <label className="field" style={{marginTop:18}}>Display name<input className="input" name="full_name" defaultValue={profile.full_name||user?.name||""} maxLength={100}/></label>
           <label className="field">Personal style<select className="input" name="style" defaultValue={String(prefs.style||"Relaxed minimal")}>{styles.map(s=><option key={s}>{s}</option>)}</select></label>
           <label className="field">Colors or styles you usually avoid <small>Comma-separated</small><input className="input" name="avoid" defaultValue={Array.isArray(prefs.avoidedColors)?prefs.avoidedColors.join(", "):""} placeholder="e.g. neon, very formal, itchy fabrics"/></label>
           <label className="field">What should the stylist remember?<textarea className="input textarea" name="notes" defaultValue={String(prefs.notes||"")} maxLength={1200} placeholder="Comfort preferences, dress codes, modesty, fit constraints, things you love…"/></label>
@@ -1210,10 +1199,8 @@ export function LookuApp() {
           <button className="button primary" type="submit" disabled={savingProfile}>{savingProfile?"Saving…":"Save preferences"}</button>
         </form>
         <aside className="stack">
-          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><p className="small muted" style={{lineHeight:1.7}}>Account authenticated through Supabase. Wardrobe images are stored in private object storage; the browser only receives short-lived signed URLs.</p><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button><button className="button danger" style={{width:"100%",marginTop:9}} onClick={()=>void deleteAccount()}><Trash2 size={14}/>Delete account and data</button></div>
-          <div className="surface soft"><span className="eyebrow">YOUR AI ALLOWANCE</span><h3 style={{fontSize:23,fontWeight:500,margin:"10px 0 5px"}}>10 AI operations per day</h3><p className="small muted" style={{lineHeight:1.6}}>The backend applies a per-user daily limit to help control model costs. Image recognition and styling use the same allowance.</p></div>
-          <div className="surface"><span className="eyebrow">PRIVACY AND CONTROL</span><p className="small muted" style={{lineHeight:1.7}}>You can remove wardrobe items, delete saved looks and export your metadata. You can delete your account from this screen. The secure server-side flow confirms your email, removes private photos, and deletes account records.</p><a className="text-action" href="https://www.odpc.go.ke/" target="_blank" rel="noreferrer">Kenya data protection authority <ExternalLink size={11} style={{display:"inline"}}/></a></div>
-          {admin&&<div className="surface"><span className="eyebrow">INTERNAL TOOLS</span><h3 style={{margin:"8px 0",fontWeight:500}}>Catalog administration</h3><p className="small muted">You are allow-listed for catalog management. Add records, inspect review state and only publish products with authorized sources.</p><button className="button compact" onClick={()=>switchScreen("Shop")}>Open catalog tools</button></div>}
+          <div className="surface"><div className="row"><div className="avatar lg">{getInitials(profile.full_name||user?.name||"Looku")}</div><div style={{flex:1,minWidth:0}}><strong>{profile.full_name||user?.name}</strong><p className="small muted" style={{margin:"5px 0 0",overflowWrap:"anywhere"}}>{user?.email}</p></div></div><div className="divider"/><button className="button" style={{width:"100%"}} onClick={exportData}><Download size={14}/>Export my data</button><button className="button" style={{width:"100%",marginTop:9}} onClick={()=>void signOut()}><LogOut size={14}/>Sign out</button><button className="button danger" style={{width:"100%",marginTop:9}} onClick={()=>void deleteAccount()}><Trash2 size={14}/>Delete account and data</button></div>
+          {admin&&<div className="surface"><span className="eyebrow">INTERNAL TOOLS</span><h3 style={{margin:"8px 0",fontWeight:500}}>Catalog administration</h3><button className="button compact" onClick={()=>switchScreen("Shop")}>Open catalog tools</button></div>}
         </aside>
       </div>
     </>;
