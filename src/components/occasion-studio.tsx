@@ -224,7 +224,7 @@ export function OccasionStudio({
     </section>
 
     <section className="surface section" style={{padding:18}}>
-      <div className="row"><div><span className="eyebrow">SAVE YOUR PLAN</span><h2 className="section-title">Make the look part of your calendar.</h2><p className="section-note">Save the occasion date and outfit plan to your LOOKU planner. This does not create or edit a Google Calendar event.</p></div><CalendarDays size={23}/></div>
+      <div className="row"><div><span className="eyebrow">SAVE YOUR PLAN</span><h2 className="section-title">Make the look part of your calendar.</h2></div><CalendarDays size={23}/></div>
       <button className="button primary" style={{marginTop:12}} onClick={()=>onPlan(eventDate || new Date().toISOString().slice(0,10), eventName+" outfit", eventName)}>Plan this occasion <ArrowRight size={14}/></button>
     </section>
   </div>;
