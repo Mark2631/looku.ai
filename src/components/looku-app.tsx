@@ -1136,11 +1136,6 @@ export function LookuApp() {
     return <StyleInsights
       items={items}
       outfits={outfits}
-      integrationHealth={integrationHealth}
-      calendarConnected={calendarStatus.connected}
-      weatherConnected={Boolean(weather)}
-      weatherCitySet={Boolean(weatherCity)}
-      productCount={products.length}
       onStyleItem={(name) => {
         setMood("Build a look featuring " + name + ".");
         switchScreen("Stylist");
