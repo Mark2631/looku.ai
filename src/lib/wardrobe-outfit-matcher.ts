@@ -82,22 +82,38 @@ export function matchWardrobeOutfits(
   }
   candidates.sort((a, b) => b.score - a.score);
   const unique = new Set<string>();
+  const preferredTypes = new Set<string>();
+  const deferred: typeof candidates = [];
   const looks: MatchLook[] = [];
-  for (const candidate of candidates) {
+  const targetCount = Math.max(1, Math.min(count, 3));
+  const coreCategories = new Set(["Tops", "Bottoms", "Dresses", "Swimwear"]);
+  const toLook = (candidate: typeof candidates[number]): MatchLook => {
     const ids = candidate.pieces.map(p => p.id);
-    const key = [...ids].sort().join("|");
-    if (unique.has(key)) continue;
-    unique.add(key);
     const labels = candidate.pieces.map(item => item.name);
-    looks.push({
+    return {
       title: labels.length > 2 ? labels[0] + " + " + labels[1] + " edit" : labels.join(" + "),
       style: "Wardrobe match",
       reason: "Made from your available " + candidate.pieces.map(item => item.category.toLowerCase()).join(", ") +
         ". Ranked by the occasion's approximate formality and the colors you recorded. Check comfort, fit, and dress code yourself.",
       itemIds: ids,
       confidenceNote: "Rule-based combination, not an AI-generated or visually verified outfit.",
-    });
-    if (looks.length >= Math.max(1, Math.min(count, 3))) break;
+    };
+  };
+  // Show a dress option alongside separates before spending all three slots on top/bottom permutations.
+  for (const candidate of candidates) {
+    const ids = candidate.pieces.map(p => p.id);
+    const key = [...ids].sort().join("|");
+    if (unique.has(key)) continue;
+    unique.add(key);
+    const signature = candidate.pieces.map(piece => piece.category).filter(category => coreCategories.has(category)).sort().join("+");
+    if (!preferredTypes.has(signature) && looks.length < targetCount) {
+      looks.push(toLook(candidate));
+      preferredTypes.add(signature);
+    } else deferred.push(candidate);
+  }
+  for (const candidate of deferred) {
+    if (looks.length >= targetCount) break;
+    looks.push(toLook(candidate));
   }
   return looks;
 }
