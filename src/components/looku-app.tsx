@@ -48,7 +48,7 @@ type IntegrationHealth = { backendConfigured?: boolean; aiGatewayKeyConfigured?:
 const navItems: { id: Screen; label: string; icon: typeof House; group?: string }[] = [
   { id: "Today", label: "Today", icon: House, group: "YOUR SPACE" },
   { id: "Closet", label: "My closet", icon: Shirt },
-  { id: "Stylist", label: "AI stylist", icon: Sparkles, group: "YOUR STYLE" },
+  { id: "Stylist", label: "AI stylist", icon: Shirt, group: "YOUR STYLE" },
   { id: "Occasion", label: "Occasion studio", icon: CalendarCheck },
   { id: "TryOn", label: "Virtual fitting room", icon: Camera },
   { id: "Plan", label: "Outfit planner", icon: CalendarDays },
@@ -1219,7 +1219,15 @@ export function LookuApp() {
     </>;
   }
 
-  if (!ready) return null;
+  if (!ready) return <main className="looku-startup" aria-label="Opening Looku">
+    <div className="looku-startup-wordmark">looku<span className="dot">.</span></div>
+    <div className="looku-startup-spacer" />
+    <div className="looku-startup-composer" aria-hidden="true">
+      <span className="looku-skeleton-square" />
+      <span className="looku-skeleton-line" />
+      <span className="looku-skeleton-send" />
+    </div>
+  </main>;
 
   if (!configured) return <main className="auth-shell"><div className="auth-card"><Link href="/" className="wordmark">looku<span className="dot">.</span></Link><h1 className="page-title serif">Looku is taking a short break.</h1><p className="page-subtitle">Your style space is temporarily unavailable. Please try again shortly.</p></div></main>;
 
@@ -1235,12 +1243,11 @@ export function LookuApp() {
           <button className="icon-button looku-menu-button" type="button" onClick={() => setMoreOpen(value => !value)} aria-label="Open navigation"><Menu size={18}/></button>
           <div className="looku-brand"><div className="wordmark">looku<span className="dot">.</span></div></div>
         </div>
-        <div className="topbar-right">
+        {screen !== "Today" && <div className="topbar-right">
           <button className="button primary compact looku-new-look-button" type="button" onClick={startNewLook} aria-label="Start a new look" title="New Look"><Plus size={14}/>New Look</button>
           <button className="icon-button" type="button" onClick={() => switchScreen("Settings")} aria-label="Profile and preferences"><UserRound size={16}/></button>
-        </div>
+        </div>}
       </header>
-      {loadingData && <div className="small muted" style={{ margin: "16px 0" }}><LoaderCircle size={13} className="spin-icon" style={{ display: "inline", verticalAlign: "middle", marginRight: 6 }}/>Syncing your style space…</div>}
       {content}
       {screen !== "Today" && <footer className="looku-app-footer"><button type="button" className="text-action" onClick={() => switchScreen("Settings")}>Privacy & preferences</button><button type="button" className="text-action" onClick={() => switchScreen("Shop")}>Store</button></footer>}
     </main>
