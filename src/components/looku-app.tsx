@@ -894,7 +894,6 @@ export function LookuApp() {
         <span className="badge neutral">LOOK {index + 1}</span>
       </div>
       <div className="outfit-composition">{pieces.map(item => <div className="piece-card" key={item.id}><img src={item.image_url || ""} alt={item.name} loading="lazy"/><div className="piece-info"><span className="piece-name">{item.name}</span><span className="piece-meta">{item.category} · {(item.colors || []).slice(0,2).join(", ") || "Color not set"}</span><select aria-label={"Replace "+item.name} className="input" value={item.id} onChange={e=>replaceGeneratedPiece(index,item.id,e.target.value)} style={{padding:"7px",fontSize:10,marginTop:8}}>{availableItems.filter(candidate=>candidate.category===item.category&&(candidate.id===item.id||!idea.itemIds.includes(candidate.id))).map(candidate=><option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</select></div></div>)}</div>
-      {idea.confidenceNote && <p className="tiny muted" style={{ margin: "12px 0 0" }}>{idea.confidenceNote}</p>}
       
       <div className="tool-row" style={{ marginTop: 14 }}>
         <button className="button primary compact" disabled={modalBusy} onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save this look</button><button className="button compact" onClick={()=>{ switchScreen("TryOn"); showToast("Choose a garment from this look to preview on your photo."); }}><Camera size={14}/>See on me</button>
