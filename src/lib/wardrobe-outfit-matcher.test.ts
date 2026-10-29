@@ -32,6 +32,19 @@ describe("wardrobe matcher", () => {
     const looks=matchWardrobeOutfits([a,b,item("jeans","Bottoms"),item("shoes","Shoes")],"Campus",2,[],[],[],["red"]);
     expect(looks[0].itemIds).toContain("blue-top");
   });
+  it("shows different outfit types before repeating similar separates combinations", () => {
+    const clothes=[
+      item("tee","Tops"),
+      item("jeans","Bottoms"),
+      item("second-bottom","Bottoms"),
+      item("dress","Dresses"),
+      item("shoes","Shoes"),
+    ];
+    const looks=matchWardrobeOutfits(clothes,"Campus",3);
+    expect(looks).toHaveLength(3);
+    expect(looks.some(look=>look.itemIds.includes("dress"))).toBe(true);
+    expect(new Set(looks.map(look=>look.itemIds.includes("dress") ? "dress" : "separates")).size).toBe(2);
+  });
   it("returns at most three unique combinations", () => {
     const clothes=[item("a","Tops"),item("b","Tops"),item("c","Bottoms"),item("d","Shoes")];
     const looks=matchWardrobeOutfits(clothes,"Birthday",3);
