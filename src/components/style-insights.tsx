@@ -1,33 +1,18 @@
 "use client";
 
-import { BookOpenText, CalendarDays, CheckCircle2, CircleAlert, CloudSun, ExternalLink, Heart, Layers3, Lightbulb, ShieldCheck, Shirt, ShoppingBag, Sparkles, TrendingUp } from "lucide-react";
-import { INTEGRATION_GUIDES, STYLE_RESEARCH_REVIEWED, STYLE_RESEARCH_SOURCES } from "@/lib/style-research";
+import { Heart, Shirt, TrendingUp } from "lucide-react";
 
 type InsightItem = { id: string; name: string; category: string; status: "available" | "laundry" | "retired"; image_url?: string | null };
 type InsightOutfit = { id: string; title: string; status: "suggested" | "saved" | "planned" | "worn"; item_ids: string[] };
-type IntegrationHealth = {
-  backendConfigured?: boolean;
-  aiGatewayKeyConfigured?: boolean;
-  aiGatewayMode?: "api-key" | "vercel-oidc" | "not-configured";
-  adminCatalogConfigured?: boolean;
-  calendarConfigured?: boolean;
-  weatherConfigured?: boolean;
-  tryOnConfigured?: boolean;
-};
 type Props = {
   items: InsightItem[];
   outfits: InsightOutfit[];
-  integrationHealth: IntegrationHealth | null;
-  calendarConnected: boolean;
-  weatherConnected: boolean;
-  weatherCitySet: boolean;
-  productCount: number;
   onStyleItem: (name: string) => void;
 };
 
 const CATEGORY_GROUPS = ["Tops","Bottoms","Shoes","Outerwear","Dresses","Accessories","Activewear","Sleepwear","Bags","Other"];
 
-export function StyleInsights({ items, outfits, integrationHealth, calendarConnected, weatherConnected, weatherCitySet, productCount, onStyleItem }: Props) {
+export function StyleInsights({ items, outfits, onStyleItem }: Props) {
   const wornCounts = new Map<string, number>();
   outfits.filter(outfit => outfit.status === "worn").forEach(outfit => outfit.item_ids.forEach(id => wornCounts.set(id, (wornCounts.get(id) || 0) + 1)));
   const wornLooks = outfits.filter(outfit => outfit.status === "worn");
@@ -63,25 +48,13 @@ export function StyleInsights({ items, outfits, integrationHealth, calendarConne
 
   return <>
     <div>
-      <span className="eyebrow">EVIDENCE-LED PERSONAL STYLE</span>
-      <h1 className="page-title serif">Style intelligence.</h1>
-      <p className="page-subtitle">An open view of how LOOKU makes styling decisions: your own wardrobe history, practical rules and cited research. Research guides the recommendations; it doesn't override your taste.</p>
+      <h1 className="page-title serif">Your style</h1>
     </div>
     <div className="stat-grid section">
       <div className="stat"><span className="stat-label">Your pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Garments in your digital wardrobe</span></div>
       <div className="stat"><span className="stat-label">Looks actually worn</span><div className="stat-number">{wornLooks.length}</div><span className="stat-caption">Records you marked as worn</span></div>
       <div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Saved, planned and worn looks</span></div>
     </div>
-
-    <section className="section">
-      <div className="section-head"><div><span className="eyebrow">HOW THE STYLIST DECIDES</span><h2 className="section-title">Constraints first. Taste always.</h2><p className="section-note">These are explainable product rules, not a claim that fashion has one objectively correct answer.</p></div></div>
-      <div className="quick-grid">
-        <div className="quick-card"><Shirt/><span className="eyebrow">01</span><strong>Start with reality</strong><span>Only owned, available garments can become outfit pieces. Laundry items stay out of the shortlist.</span></div>
-        <div className="quick-card"><CalendarDays/><span className="eyebrow">02</span><strong>Respect the occasion</strong><span>Event formality, comfort, accessibility and explicit instructions outrank aesthetic scoring.</span></div>
-        <div className="quick-card"><Layers3/><span className="eyebrow">03</span><strong>Balance the whole look</strong><span>Combine category logic with supported color, pattern and silhouette signals rather than one score.</span></div>
-        <div className="quick-card"><Heart/><span className="eyebrow">04</span><strong>Learn from feedback</strong><span>Your likes, dislikes and logged wear history personalize later suggestions.</span></div>
-      </div>
-    </section>
 
     <section className="section">
       <div className="section-head"><div><span className="eyebrow">PERSONAL WARDROBE ANALYTICS</span><h2 className="section-title">What your data says</h2><p className="section-note">Only information recorded in your own LOOKU wardrobe is counted.</p></div><TrendingUp size={22}/></div>
@@ -101,30 +74,5 @@ export function StyleInsights({ items, outfits, integrationHealth, calendarConne
       </div>
     </section>
 
-    <section className="section">
-      <div className="section-head"><div><span className="eyebrow">RESEARCH LIBRARY</span><h2 className="section-title">Why we style this way</h2><p className="section-note">Curated sources, reviewed {STYLE_RESEARCH_REVIEWED}. This research is embedded into LOOKU's recommendation instructions.</p></div><BookOpenText size={22}/></div>
-      <div className="stack">{STYLE_RESEARCH_SOURCES.map(source=><article className="surface" key={source.id}>
-        <div className="row" style={{alignItems:"start"}}><div style={{minWidth:0}}><span className="badge neutral">{source.publisher} · {source.year}</span><h3 style={{fontSize:19,fontWeight:500,lineHeight:1.35,margin:"11px 0 8px"}}>{source.title}</h3></div><BookOpenText size={20}/></div>
-        <p className="small" style={{lineHeight:1.7,margin:"0 0 12px"}}>{source.takeaway}</p>
-        <div className="surface soft" style={{padding:13,boxShadow:"none",marginBottom:10}}><strong className="tiny">HOW LOOKU USES IT</strong><p className="small" style={{lineHeight:1.6,margin:"6px 0 0"}}>{source.application}</p></div>
-        <p className="tiny muted" style={{lineHeight:1.6,margin:"0 0 12px"}}><strong>Limit:</strong> {source.limitation}</p>
-        <a className="text-action" href={source.url} target="_blank" rel="noreferrer">Read original source <ExternalLink size={11} style={{display:"inline"}}/></a>
-      </article>)}</div>
-    </section>
-
-    <section className="section">
-      <div className="section-head"><div><span className="eyebrow">CONNECTED SERVICES</span><h2 className="section-title">Integration readiness</h2><p className="section-note">An integration is only called connected when the real provider flow succeeds.</p></div><ShieldCheck size={22}/></div>
-      <div className="stack">{INTEGRATION_GUIDES.map(guide=><article className="surface row" key={guide.id} style={{alignItems:"start"}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div className="row" style={{justifyContent:"start",flexWrap:"wrap"}}><strong style={{fontSize:14}}>{guide.name}</strong><span className="badge neutral">{integrationStatus(guide.id)}</span></div>
-          <p className="small muted" style={{lineHeight:1.6,margin:"8px 0"}}>{guide.purpose}</p>
-          <p className="tiny" style={{lineHeight:1.6,margin:"0 0 7px"}}><strong>Required:</strong> {guide.required}</p>
-          <p className="tiny muted" style={{lineHeight:1.6,margin:"0 0 9px"}}>{guide.note}</p>
-          <a className="text-action" href={guide.setup} target="_blank" rel="noreferrer">Official setup guide <ExternalLink size={11} style={{display:"inline"}}/></a>
-        </div>
-        <span className="avatar"><CheckCircle2 size={16}/></span>
-      </article>)}</div>
-      <div className="privacy-banner section"><CircleAlert/><span>Weather and calendar context should be used only when configured and authorized. The model receives a small, relevant context summary with a styling request—not a full calendar export or the user's entire account data.</span></div>
-    </section>
   </>;
 }
