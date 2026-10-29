@@ -32,6 +32,12 @@ describe("wardrobe matcher", () => {
     const looks=matchWardrobeOutfits([a,b,item("jeans","Bottoms"),item("shoes","Shoes")],"Campus",2,[],[],[],["red"]);
     expect(looks[0].itemIds).toContain("blue-top");
   });
+  it("prioritizes requested colors in the user's prompt", () => {
+    const red={...item("red-top","Tops"),colors:["red"]};
+    const blue={...item("blue-top","Tops"),colors:["blue"]};
+    const looks=matchWardrobeOutfits([red,blue,item("jeans","Bottoms")],"Everyday",2,[],[],[],[],"Please style me with the red top");
+    expect(looks[0].itemIds).toContain("red-top");
+  });
   it("shows different outfit types before repeating similar separates combinations", () => {
     const clothes=[
       item("tee","Tops"),
