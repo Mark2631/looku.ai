@@ -95,7 +95,18 @@ export async function POST(request: NextRequest) {
       "User wardrobe (IDs are the only allowed item references): " + JSON.stringify(items)
     ].join("\n\n");
     const wardrobeFallback = () => {
-      const matching = matchWardrobeOutfits(items, body.data.occasion, body.data.count, recentlyWornItemIds, [...likedItemIds], [...dislikedItemIds], Array.isArray(preferences.avoidedColors) ? preferences.avoidedColors.filter((x:unknown):x is string => typeof x === "string").slice(0,15) : []);
+      const matching = matchWardrobeOutfits(
+        items,
+        body.data.occasion,
+        body.data.count,
+        recentlyWornItemIds,
+        [...likedItemIds],
+        [...dislikedItemIds],
+        Array.isArray(preferences.avoidedColors) ? preferences.avoidedColors.filter((x:unknown):x is string => typeof x === "string").slice(0,15) : [],
+        body.data.prompt,
+        typeof preferences.style === "string" ? preferences.style : "",
+        Array.isArray(preferences.preferredColors) ? preferences.preferredColors.filter((x:unknown):x is string => typeof x === "string").slice(0,8) : [],
+      );
       if (!matching.length) return NextResponse.json({ error: "Your closet needs a complete combination: a top with bottoms, a dress, or swimwear for pool/beach activities. Add at least one more compatible piece." }, { status: 422 });
       return NextResponse.json({ outfits: matching, method: "wardrobe-rules", notice: "AI model unavailable or returned an invalid result. These are rule-based matches made exclusively from your own available clothing." }, { headers: { "Cache-Control": "no-store" } });
     };
