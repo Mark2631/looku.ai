@@ -1005,143 +1005,26 @@ export function LookuApp() {
   }
 
   function renderToday() {
-    const memories = outfits.filter(outfit => outfit.status === "worn").slice(0, 8);
-    const savedAndLiked = outfits.filter(outfit => outfit.status === "saved" || outfit.status === "planned" || likedOutfitIds.includes(outfit.id)).slice(0, 8);
-    const latestSaved = savedAndLiked.length > 0 ? savedAndLiked : savedLooks.slice(0, 6);
-    return <div className="looku-chat-home">
-      <section className="looku-home-intro looku-home-intro-compact">
-        <h1 className="looku-home-title">What are we wearing?</h1>
-      </section>
-
+    return <div className="looku-chat-home looku-quiet-home">
       {chat.length > 1 && <section className="looku-home-thread" aria-live="polite">
         {chat.slice(1).map((message, index) => <div key={index} className={"looku-home-message " + (message.role === "user" ? "user" : "")}>{message.text}</div>)}
-        {styling && <div className="looku-home-message"><LoaderCircle size={14} className="spin-icon" style={{ display: "inline", verticalAlign: "middle", marginRight: 7 }}/>Building a look from your available clothes…</div>}
       </section>}
-
-      {aiError && <div className="section"><ErrorNotice>{aiError}</ErrorNotice></div>}
-
-      <div className="looku-prompt-chips" aria-label="Suggested styling prompts">
-        <button className="looku-prompt-chip" type="button" onClick={() => { setOccasion("Everyday"); setChatInput("Style me for today using my wardrobe. Consider the weather and what I have planned."); }}><Sparkles size={14}/>Style me today</button>
-        <button className="looku-prompt-chip" type="button" onClick={() => { setOccasion("Date night"); setChatInput("Create a confident date-night look that still feels like me."); }}><Heart size={14}/>Date night</button>
-        <button className="looku-prompt-chip" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }}><Camera size={14}/>Start from a photo</button>
-        <button className="looku-prompt-chip" type="button" onClick={() => switchScreen("Plan")}><CalendarDays size={14}/>Plan an occasion</button>
-      </div>
-
-      <section className="looku-section" aria-label="Today's outfit selection">
-        <div className="looku-section-head">
-          <div><h2>Today’s selection</h2></div>
-          <button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>Lookbook <ArrowRight size={13}/></button>
-        </div>
-        {generated.length > 0 ? <div className="looku-shelf-row">
-          {generated.slice(0, 6).map((idea, index) => {
-            const pieces = outfitItems(idea);
-            const menuId = "generated-" + index;
-            return <article className="looku-look-tile" key={menuId + idea.title}>
-              <button type="button" className="looku-look-visual" onClick={() => { setMood(idea.title); setChatInput("Create a variation of this look: " + idea.title + ". Keep the pieces that work and explain any changes."); }}>
-                <div className="looku-piece-mosaic">{pieces.slice(0, 4).map(piece => piece.image_url ? <img key={piece.id} src={piece.image_url} alt={piece.name}/> : <div key={piece.id} className="looku-piece-placeholder"><Shirt size={22}/></div>)}</div>
-              </button>
-              <div className="looku-look-details">
-                <strong title={idea.title}>{idea.title}</strong><p>{idea.style}</p>
-                <div className="looku-card-actions">
-                  <button className="looku-card-action" type="button" onClick={() => { void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }} aria-label={"Like " + idea.title} title="Like this look"><Heart size={14}/></button>
-                  <button className="looku-card-action" type="button" onClick={() => void saveOutfit(idea)} aria-label={"Save " + idea.title} title="Save this look"><Bookmark size={14}/></button>
-                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + idea.title} title="More actions"><MoreHorizontal size={16}/></button>
-                </div>
-                {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
-                  <button type="button" onClick={() => { setLookMenu(null); void recordSuggestionFeedback(idea, "love"); void saveOutfit(idea, occasion, true); }}><Heart size={14}/>Like this look</button>
-                  <button type="button" onClick={() => { setLookMenu(null); void saveOutfit(idea); }}><Bookmark size={14}/>Pin to saved</button>
-                  <button type="button" onClick={() => { setLookMenu(null); void shareOutfitIdea(idea); }}><ArrowUpRight size={14}/>Share look</button>
-                  <button type="button" onClick={() => { setLookMenu(null); setChatInput("Make a new version of " + idea.title + ", with one thoughtful change."); document.getElementById("looku-composer-input")?.focus(); }}><WandSparkles size={14}/>Create a variation</button>
-                </div>}
-              </div>
-            </article>;
-          })}
-        </div> : latestSaved.length > 0 ? <div className="looku-shelf-row">
-          {latestSaved.slice(0, 6).map(outfit => {
-            const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
-            const menuId = "saved-" + outfit.id;
-            return <article className="looku-look-tile" key={outfit.id}>
-              <button type="button" className="looku-look-visual" onClick={() => switchScreen("Looks")}>
-                {cover ? <img className="looku-look-cover" src={cover} alt={outfit.title}/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Saved look</span></div>}
-              </button>
-              <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{outfit.occasion}</p>
-                <div className="looku-card-actions">
-                  <button className="looku-card-action" type="button" onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like this look"><Heart size={14}/></button>
-                  <button className="looku-card-action" type="button" onClick={() => { openModal("plan", outfit.id); }} aria-label={"Plan " + outfit.title} title="Plan this look"><CalendarPlus size={14}/></button>
-                  <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
-                </div>
-                {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
-                  <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
-                  <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Add to calendar</button>
-                  <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open memory</button>
-                </div>}
-              </div>
-            </article>;
-          })}
-        </div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Start with a prompt.</strong></div><button className="button compact" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }}><Plus size={13}/>Add clothes</button></div>}
-      </section>
-
-      <section className="looku-section" aria-label="Outfit memories">
-        <div className="looku-section-head"><div><h2>Memories</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
-        {memories.length ? <div className="looku-shelf-row">{memories.map(outfit => {
-          const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
-          const menuId = "memory-" + outfit.id;
-          return <article className="looku-look-tile" key={outfit.id}>
-            <button type="button" className="looku-look-visual" aria-label={"Open " + outfit.title + " in memories"} onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt=""/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Look memory</span></div>}</button>
-            <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{formatDate(outfit.worn_at || outfit.created_at)} · {outfit.occasion}</p>
-              <div className="looku-card-actions">
-                <button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button>
-                <button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button>
-                <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
-              </div>
-              {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
-                <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
-                <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Plan this look</button>
-                <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open memories</button>
-              </div>}
+      {styling && <p className="looku-thinking" role="status">Putting your look together…</p>}
+      {aiError && <ErrorNotice>{aiError}</ErrorNotice>}
+      {generated.length > 0 && <section className="looku-result-grid" aria-label="Your outfit suggestions">
+        {generated.map((idea, index) => {
+          const pieces = outfitItems(idea);
+          return <article className="looku-result-card" key={idea.title + index}>
+            <div className="looku-result-pieces">{pieces.slice(0, 4).map(piece => piece.image_url ? <img key={piece.id} src={piece.image_url} alt={piece.name}/> : <span key={piece.id}>{piece.name}</span>)}</div>
+            <strong>{idea.title}</strong>
+            <p>{idea.reason}</p>
+            <div className="looku-result-actions">
+              <button type="button" onClick={() => void saveOutfit(idea)}><Bookmark size={14}/>Save</button>
+              <button type="button" onClick={() => setChatInput("Create a variation of " + idea.title + " for me.")}><RefreshCw size={14}/>Try another</button>
             </div>
           </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>No memories yet.</strong></div><button className="button compact" type="button" onClick={() => openModal("look")}><Plus size={13}/>Record a look</button></div>}
-      </section>
-
-      <section className="looku-section" aria-label="Saved and liked looks">
-        <div className="looku-section-head"><div><h2>Saved & liked</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Looks")}>View all <ArrowRight size={13}/></button></div>
-        {savedAndLiked.length ? <div className="looku-shelf-row">{savedAndLiked.map(outfit => {
-          const cover = outfit.cover_url || outfitItems(outfit).find(item => item.image_url)?.image_url;
-          const menuId = "favourite-" + outfit.id;
-          return <article className="looku-look-tile" key={menuId}>
-            <button type="button" className="looku-look-visual" aria-label={"Open " + outfit.title + " in memories"} onClick={() => switchScreen("Looks")}>{cover ? <img className="looku-look-cover" src={cover} alt=""/> : <div className="looku-tile-empty"><ImagePlus size={22}/><span>Saved look</span></div>}</button>
-            <div className="looku-look-details"><strong title={outfit.title}>{outfit.title}</strong><p>{outfit.occasion}</p>
-              <div className="looku-card-actions">
-                <button className="looku-card-action" type="button" onClick={() => void shareLook(outfit)} aria-label={"Share " + outfit.title} title="Share"><ArrowUpRight size={14}/></button>
-                <button className={"looku-card-action" + (likedOutfitIds.includes(outfit.id) ? " active" : "")} type="button" aria-pressed={likedOutfitIds.includes(outfit.id)} onClick={() => void reactToOutfit(outfit, "like")} aria-label={"Like " + outfit.title} title="Like"><Heart size={14}/></button>
-                <button className={"looku-card-action" + (lookMenu?.id === menuId ? " active" : "")} type="button" onClick={event => toggleLookMenu(menuId, event)} aria-expanded={lookMenu?.id === menuId} aria-label={"More actions for " + outfit.title} title="More actions"><MoreHorizontal size={16}/></button>
-              </div>
-              {lookMenu?.id === menuId && <div className="looku-action-menu" style={{ top: lookMenu.top, left: lookMenu.left, transform: lookMenu.above ? "translateY(-100%)" : "none" }}>
-                <button type="button" onClick={() => { setLookMenu(null); void shareLook(outfit); }}><ArrowUpRight size={14}/>Share look</button>
-                <button type="button" onClick={() => { setLookMenu(null); openModal("plan", outfit.id); }}><CalendarDays size={14}/>Plan this look</button>
-                <button type="button" onClick={() => { setLookMenu(null); switchScreen("Looks"); }}><ImagePlus size={14}/>Open lookbook</button>
-                {likedOutfitIds.includes(outfit.id) && <button type="button" onClick={() => { setLookMenu(null); void reactToOutfit(outfit, "like"); }}><Heart size={14}/>Remove from liked</button>}
-              </div>}
-            </div>
-          </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>No saved looks yet.</strong></div><button className="button compact" type="button" onClick={() => switchScreen("Looks")}><Bookmark size={13}/>Open lookbook</button></div>}
-      </section>
-
-      <section className="looku-section" aria-label="Store picks">
-        <div className="looku-section-head"><div><h2>Store</h2></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Shop")}>Browse store <ArrowRight size={13}/></button></div>
-        {products.length ? <div className="looku-shelf-row">{products.slice(0, 10).map(product => {
-          const imageUrl = product.image_url ? safeExternalUrl(product.image_url) : null;
-          const productUrl = safeExternalUrl(product.affiliate_url) || safeExternalUrl(product.product_url);
-          return <article className="looku-product-tile" key={product.id}>
-            {productUrl ? <a href={productUrl} target="_blank" rel="sponsored noopener noreferrer" aria-label={"View " + product.title}>{imageUrl ? <img className="looku-product-image" src={imageUrl} alt={product.title} loading="lazy"/> : <div className="looku-product-placeholder"><ShoppingBag size={24}/></div>}</a> : <div>{imageUrl ? <img className="looku-product-image" src={imageUrl} alt={product.title} loading="lazy"/> : <div className="looku-product-placeholder"><ShoppingBag size={24}/></div>}</div>}
-            <div className="looku-product-info"><strong title={product.title}>{product.title}</strong><span>{product.currency} {product.price === null ? "Price at store" : Number(product.price).toLocaleString()}</span></div>
-          </article>;
-        })}</div> : <div className="looku-shelf-empty"><div className="looku-shelf-empty-copy"><strong>Nothing here yet.</strong></div><button className="button compact" type="button" onClick={() => switchScreen("Shop")}><ShoppingBag size={13}/>Explore store</button></div>}
-      </section>
-
-      {todayPlans.length > 0 && <section className="looku-section"><div className="looku-section-head"><div><h2>On your calendar today</h2><p>Outfits you’ve already planned.</p></div><button className="looku-section-link" type="button" onClick={() => switchScreen("Plan")}>Calendar <ArrowRight size={13}/></button></div><div className="stack">{todayPlans.slice(0, 3).map(plan => <div className="outfit-row" key={plan.id}><div style={{minWidth:0,flex:1}}><strong>{plan.event_title}</strong><small>{plan.occasion} · {formatDate(plan.plan_date)}</small></div><button className="looku-card-action" onClick={() => openModal("plan", plan.outfit_id, plan.plan_date)} aria-label={"Edit " + plan.event_title}><Pencil size={14}/></button></div>)}</div></section>}
-      {weather && <p className="tiny muted" style={{marginTop:20}}>Weather in {weather.location.name}: {weather.current.condition}, {Math.round(weather.current.tempC)}°C.</p>}
+        })}
+      </section>}
     </div>;
   }
 
@@ -1350,7 +1233,7 @@ export function LookuApp() {
       <header className="topbar looku-topbar">
         <div className="topbar-left">
           <button className="icon-button looku-menu-button" type="button" onClick={() => setMoreOpen(value => !value)} aria-label="Open navigation"><Menu size={18}/></button>
-          <div className="looku-brand"><div className="wordmark">looku<span className="dot">.</span></div><div className="tagline">{screen === "Today" ? "YOUR PERSONAL STYLE ASSISTANT" : (currentNav?.label || "YOUR STYLE SPACE").toUpperCase()}</div></div>
+          <div className="looku-brand"><div className="wordmark">looku<span className="dot">.</span></div></div>
         </div>
         <div className="topbar-right">
           <button className="button primary compact looku-new-look-button" type="button" onClick={startNewLook} aria-label="Start a new look" title="New Look"><Plus size={14}/>New Look</button>
@@ -1363,12 +1246,18 @@ export function LookuApp() {
     </main>
 
     {(screen === "Today" || screen === "Stylist") && <div className="looku-composer-dock">
+      {screen === "Today" && chat.length <= 1 && generated.length === 0 && <div className="looku-mini-prompts" aria-label="Try a look">
+        <button type="button" onClick={() => setChatInput("Style me for today using what I own.")}>Today</button>
+        <button type="button" onClick={() => { setOccasion("Date night"); setChatInput("Help me put together a date-night outfit."); }}>Date night</button>
+        <button type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }}>Photo</button>
+        <button type="button" onClick={() => switchScreen("Shop")}>Shop</button>
+      </div>}
       <form className="looku-composer-form" onSubmit={sendChat}>
         <button className="looku-composer-tool" type="button" onClick={() => { setShowOutfitScanner(true); switchScreen("Closet"); }} aria-label="Add wardrobe photo" title="Add from a photo"><Plus size={20}/></button>
         <textarea id="looku-composer-input" className="looku-composer-input" rows={1} style={{ overflowY: chatInput.length > 180 ? "auto" : "hidden" }} maxLength={1000} value={chatInput} onChange={event => setChatInput(event.target.value)} placeholder="Describe the look you want…" aria-label="Describe the look you want"/>
         <div className="looku-composer-tools">
           <button className="looku-composer-tool" type="button" onClick={startVoiceInput} aria-label="Use voice input" title="Speak your prompt"><Mic size={18}/></button>
-          <button className="looku-composer-send" type="submit" disabled={styling || !chatInput.trim()} aria-label="Create look" title="Create look">{styling ? <LoaderCircle size={17} className="spin-icon"/> : <ArrowRight size={18}/>}</button>
+          <button className="looku-composer-send" type="submit" disabled={styling || !chatInput.trim()} aria-label="Create look" title="Create look"><ArrowRight size={18}/></button>
         </div>
       </form>
       
