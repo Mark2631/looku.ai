@@ -59,9 +59,5 @@ export default function AuthPage() {
       </form>
       {mode==="reset"&&<button className="button ghost auth-reset-back" onClick={()=>setMode("signin")}><ArrowLeft size={14}/> Back to sign in</button>}
     </section>
-  </main>;   </form>
-      {mode==="reset"&&<button className="button ghost" style={{marginTop:12,width:"100%"}} onClick={()=>setMode("signin")}><ArrowLeft size={14}/> Back to sign in</button>}
-      <p className="small muted" style={{marginTop:24,lineHeight:1.7}}>By continuing, you agree to use LOOKU respectfully. Wardrobe photos are private by default; don't upload photographs of other people without permission.</p>
-    </section>
   </main>;
 }
