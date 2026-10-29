@@ -6,6 +6,8 @@ export type MatchItem = {
   formality?: number | null;
   status?: string;
   is_owned?: boolean;
+  style_tags?: string[] | null;
+  pattern?: string | null;
 };
 
 export type MatchLook = {
