@@ -209,14 +209,34 @@
   .looku-chat-home:not(.looku-stylist-page) .looku-section{margin-top:22px}
 }
 
-/* MVP: a deliberately empty starting canvas with compact prompts at the composer. */
-.looku-quiet-home{min-height:calc(100dvh - 235px);max-width:760px;padding:0;margin:0 auto}
+/* Minimal startup, home canvas, and compact prompt tiles. */
+.looku-startup{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;padding:22px max(18px,env(safe-area-inset-left));background:var(--paper);color:var(--ink)}
+.looku-startup-wordmark{font-size:27px;font-weight:750;letter-spacing:-.09em;line-height:1}
+.looku-startup-wordmark .dot{color:var(--sage-dark)}
+.looku-startup-spacer{flex:1}
+.looku-startup-composer{width:min(760px,100%);min-height:58px;margin:0 auto max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--line);border-radius:17px;background:transparent}
+.looku-skeleton-square,.looku-skeleton-line,.looku-skeleton-send{display:block;flex:0 0 auto;background:color-mix(in srgb,var(--muted) 17%,transparent);animation:looku-skeleton-pulse 1.25s ease-in-out infinite alternate}
+.looku-skeleton-square{width:27px;height:27px;border-radius:8px}
+.looku-skeleton-line{width:min(42%,200px);height:8px;border-radius:20px;margin-right:auto}
+.looku-skeleton-send{width:28px;height:28px;border-radius:50%}
+@keyframes looku-skeleton-pulse{from{opacity:.45}to{opacity:.9}}
+.app-shell-chat .topbar{margin-bottom:0;min-height:44px}
+.app-shell-chat .main-area{padding-top:19px}
+.app-shell-chat .topbar-right{gap:6px}
+.looku-quiet-home{min-height:calc(100dvh - 150px);max-width:760px;padding:0;margin:0 auto}
 .looku-quiet-home .looku-home-thread{margin:16px 0 22px}
 .looku-thinking{font-size:12px;color:var(--muted);padding:10px 0}
-.looku-mini-prompts{display:flex;gap:7px;overflow-x:auto;padding:0 1px 9px;scrollbar-width:none}
+.looku-mini-prompts{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:0 1px 12px;scrollbar-width:none}
 .looku-mini-prompts::-webkit-scrollbar{display:none}
-.looku-mini-prompts button{flex:0 0 auto;min-width:70px;min-height:39px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);padding:8px 12px;font-size:12px;font-weight:500}
+.looku-mini-prompts button{display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;min-width:58px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);padding:5px;font-size:11px;font-weight:500;line-height:1.15;text-align:center;white-space:normal}
 .looku-mini-prompts button:hover,.looku-mini-prompts button:focus-visible{background:var(--oat);outline-offset:2px}
+.looku-composer-dock{position:fixed;z-index:24;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100vw - 32px));padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none}
+.looku-composer-form{display:flex;align-items:flex-end;gap:7px;padding:5px;border:1px solid var(--line);border-radius:17px;background:transparent;box-shadow:none}
+.looku-composer-input{flex:1;min-height:40px;max-height:138px;resize:vertical;outline:0!important;box-shadow:none!important;border:0!important;background:transparent!important;color:var(--ink)!important;padding:10px 7px!important;font-size:13px!important;line-height:1.5}
+.looku-composer-input::placeholder{color:var(--muted)}
+.looku-composer-tool{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:10px;background:transparent;color:var(--muted)}
+.looku-composer-tool:hover{background:var(--oat);color:var(--ink)}
+.looku-composer-send{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:10px;background:var(--ink);color:var(--paper)}
 .looku-result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px;margin:16px 0 36px}
 .looku-result-card{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--white)}
 .looku-result-card strong{display:block;font-size:13px;margin:10px 0 5px}
@@ -226,22 +246,43 @@
 .looku-result-pieces span{display:grid;place-items:center;font-size:10px;padding:8px;background:var(--oat);border-radius:8px}
 .looku-result-actions{display:flex;gap:8px;margin-top:12px}
 .looku-result-actions button{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:11px}
-.looku-composer-dock{border-radius:17px;box-shadow:0 4px 22px #0002;background:var(--paper);backdrop-filter:none}
-.looku-composer-send{background:var(--ink);color:var(--paper)}
-/* Correct dark mode contrast, particularly the login and signup controls. */
-:root:not([data-looku-theme="light"]) .auth-panel,
-:root:not([data-looku-theme="light"]) .auth-panel label,
-:root:not([data-looku-theme="light"]) .auth-panel h1,
-:root:not([data-looku-theme="light"]) .auth-panel h2,
-:root:not([data-looku-theme="light"]) .auth-panel strong{color:#f5f5f6}
-:root:not([data-looku-theme="light"]) .auth-panel .input,
-:root:not([data-looku-theme="light"]) .auth-panel input,
-:root:not([data-looku-theme="light"]) .auth-panel select{background:#1c1d21;color:#f5f5f6;border-color:#45474d}
-:root:not([data-looku-theme="light"]) .auth-panel input::placeholder{color:#b4b5bd}
-:root:not([data-looku-theme="light"]) .auth-panel .field,
-:root:not([data-looku-theme="light"]) .auth-panel .auth-desc{color:#c3c5cc}
-:root:not([data-looku-theme="light"]) .segmented{background:#22242a}
-:root:not([data-looku-theme="light"]) .segmented button{color:#d0d1d6}
-:root:not([data-looku-theme="light"]) .segmented button.active{background:#383b43;color:#fff}
-:root:not([data-looku-theme="light"]) .auth-panel .button.primary{background:#f1f2f4;color:#101113;border-color:#f1f2f4}
-@media(max-width:640px){.looku-quiet-home{min-height:calc(100dvh - 190px)}.looku-composer-dock{width:calc(100vw - 20px);bottom:max(8px,env(safe-area-inset-bottom));padding:9px}.looku-result-grid{grid-template-columns:1fr 1fr;gap:8px}.looku-result-card{padding:9px}}
+
+/* The auth form uses explicit contrast rather than inheriting light-only field colors. */
+.auth-shell-minimal .auth-art::after{display:none}
+.auth-panel-minimal{max-width:520px;padding:42px clamp(22px,5vw,66px)}
+.auth-panel-minimal h2{font:400 32px Georgia,serif;letter-spacing:-.045em;margin:36px 0 20px}
+.auth-panel-minimal .auth-mode-switch{margin:0 0 22px}
+.auth-panel-minimal .field{font-size:12px;line-height:1.4}
+.auth-password-field{position:relative;display:block}
+.auth-password-toggle{position:absolute;right:9px;top:9px;width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--muted);padding:0}
+.auth-password-toggle:hover{background:var(--oat);color:var(--ink)}
+.auth-forgot{display:flex;justify-content:flex-end;margin:-3px 0 18px}
+.auth-submit{width:100%;min-height:48px}
+.auth-reset-back{margin-top:12px;width:100%}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel,
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel h2,
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel .field{color:#f1f2f4}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel .input{background:#1c1d21;color:#f5f5f6;border-color:#44464d}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel .input::placeholder{color:#a9abb4}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-panel .input:focus{border-color:#a9b89e;box-shadow:0 0 0 3px #a9b89e26}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .segmented{background:#22242a}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .segmented button{color:#d0d1d6}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .segmented button.active{background:#383b43;color:#fff}
+:root:not([data-looku-theme="light"]) .auth-shell-minimal .auth-submit{background:#f1f2f4;color:#101113;border-color:#f1f2f4}
+:root[data-looku-theme="light"] .auth-shell-minimal .auth-panel .input{background:#fff;color:#20211f;border-color:#dcd8cf}
+:root[data-looku-theme="light"] .auth-shell-minimal .auth-panel .field{color:#55574f}
+@media(max-width:640px){
+  .looku-startup{padding:18px 14px}
+  .app-shell-chat .main-area{padding:12px 15px 100px}
+  .app-shell-chat .topbar{margin:0 -3px;padding:6px 3px;min-height:42px}
+  .looku-quiet-home{min-height:calc(100dvh - 150px)}
+  .looku-composer-dock{width:calc(100vw - 24px);bottom:max(9px,env(safe-area-inset-bottom))}
+  .looku-composer-form{gap:4px;padding:4px;border-radius:15px}
+  .looku-composer-input{font-size:13px!important;min-height:38px;resize:none;overflow-y:hidden}
+  .looku-composer-tool,.looku-composer-send{width:34px;height:34px}
+  .looku-result-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .looku-result-card{padding:9px}
+  .looku-result-pieces img{width:45px;height:55px}
+  .auth-panel-minimal{min-height:100dvh;padding:28px 22px;justify-content:center}
+  .auth-panel-minimal h2{margin:28px 0 18px}
+}
