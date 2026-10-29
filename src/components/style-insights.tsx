@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Shirt, TrendingUp } from "lucide-react";
+import { Shirt, TrendingUp } from "lucide-react";
 
 type InsightItem = { id: string; name: string; category: string; status: "available" | "laundry" | "retired"; image_url?: string | null };
 type InsightOutfit = { id: string; title: string; status: "suggested" | "saved" | "planned" | "worn"; item_ids: string[] };
@@ -29,31 +29,15 @@ export function StyleInsights({ items, outfits, onStyleItem }: Props) {
   const notLogged = items.filter(item => item.status !== "retired" && !wornCounts.has(item.id)).slice(0,6);
   const maxCategory = Math.max(1,...categoryCounts.map(row=>row.count));
 
-  const integrationStatus = (id: string) => {
-    if (id === "ai") return integrationHealth?.aiGatewayMode === "api-key" ? "API key configured" : integrationHealth?.aiGatewayMode === "vercel-oidc" ? "Vercel OIDC available · first call verifies" : "Needs credentials";
-    if (id === "calendar") return calendarConnected ? "Connected" : integrationHealth?.calendarConfigured ? "Ready to connect" : "OAuth setup required";
-    if (id === "weather") return weatherConnected ? "Connected" : integrationHealth?.weatherConfigured ? (weatherCitySet ? "Configured; waiting for data" : "Add a city") : "Provider key required";
-    if (id === "tryon") return integrationHealth?.tryOnConfigured ? "Provider configured" : "Optional paid integration";
-    if (id === "retail") return productCount > 0 ? productCount + " approved products" : "Awaiting verified merchant feeds";
-    return "Not configured";
-  };
-  const integrationTone = (id: string) => {
-    if (id === "calendar" && calendarConnected) return "success";
-    if (id === "weather" && weatherConnected) return "success";
-    if (id === "retail" && productCount > 0) return "success";
-    if (id === "ai" && integrationHealth?.aiGatewayMode && integrationHealth.aiGatewayMode !== "not-configured") return "success";
-    if (id === "tryon" && integrationHealth?.tryOnConfigured) return "success";
-    return "neutral";
-  };
 
   return <>
     <div>
       <h1 className="page-title serif">Your style</h1>
     </div>
     <div className="stat-grid section">
-      <div className="stat"><span className="stat-label">Your pieces</span><div className="stat-number">{items.length}</div><span className="stat-caption">Garments in your digital wardrobe</span></div>
-      <div className="stat"><span className="stat-label">Looks actually worn</span><div className="stat-number">{wornLooks.length}</div><span className="stat-caption">Records you marked as worn</span></div>
-      <div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div><span className="stat-caption">Saved, planned and worn looks</span></div>
+      <div className="stat"><span className="stat-label">Your pieces</span><div className="stat-number">{items.length}</div></div>
+      <div className="stat"><span className="stat-label">Looks actually worn</span><div className="stat-number">{wornLooks.length}</div></div>
+      <div className="stat"><span className="stat-label">Saved combinations</span><div className="stat-number">{savedLooks.length}</div></div>
     </div>
 
     <section className="section">
