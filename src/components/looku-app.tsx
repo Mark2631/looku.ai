@@ -124,6 +124,7 @@ export function LookuApp() {
   const [generated, setGenerated] = useState<OutfitIdea[]>([]);
   const [styling, setStyling] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [stylingMethod, setStylingMethod] = useState<"ai" | "wardrobe-rules" | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([{ role: "assistant", text: "Tell me where you're going, what mood you're after, or which item you want to wear. I'll build around pieces in your actual wardrobe." }]);
   const [chatInput, setChatInput] = useState("");
   const [modal, setModal] = useState<Modal>(null);
@@ -387,6 +388,7 @@ export function LookuApp() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The stylist couldn't complete that request.");
       setGenerated(data.outfits || []);
+      setStylingMethod(data.method === "ai" ? "ai" : "wardrobe-rules");
       if (fromChat) setChat(prev => [...prev, { role: "assistant", text: (data.outfits || []).length === 1 ? "Here’s a look from your wardrobe. You can ask me to change the colour, mood or level of formality." : "Here are a few outfit options from your wardrobe. Tell me which one feels closest, or what you want changed." }]);
       showToast("Your wardrobe edit is ready.");
     } catch (error) {
