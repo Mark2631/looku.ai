@@ -41,7 +41,7 @@ export function StyleInsights({ items, outfits, onStyleItem }: Props) {
     </div>
 
     <section className="section">
-      <div className="section-head"><div><span className="eyebrow">PERSONAL WARDROBE ANALYTICS</span><h2 className="section-title">What your data says</h2><p className="section-note">Only information recorded in your own LOOKU wardrobe is counted.</p></div><TrendingUp size={22}/></div>
+      <div className="section-head"><div><span className="eyebrow">PERSONAL WARDROBE ANALYTICS</span><h2 className="section-title">What your data says</h2></div><TrendingUp size={22}/></div>
       <div className="stylist-layout">
         <div className="surface">
           <h3 style={{fontSize:16,fontWeight:500,margin:"0 0 15px"}}>Categories you own</h3>
@@ -49,11 +49,11 @@ export function StyleInsights({ items, outfits, onStyleItem }: Props) {
         </div>
         <div className="surface">
           <h3 style={{fontSize:16,fontWeight:500,margin:"0 0 13px"}}>Frequently worn</h3>
-          {frequentlyWorn.length ? <div className="stack">{frequentlyWorn.map(({item,count})=><div key={item.id} className="outfit-row">{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div className="avatar"><Shirt size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{item.name}</strong><small>{item.category} · Logged in {count} worn {count===1?"look":"looks"}</small></div></div>)}</div> : <p className="small muted">Mark a saved look as worn to build a useful wear history. LOOKU will not pretend to know how often you've worn something.</p>}
+          {frequentlyWorn.length ? <div className="stack">{frequentlyWorn.map(({item,count})=><div key={item.id} className="outfit-row">{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div className="avatar"><Shirt size={16}/></div>}<div style={{flex:1,minWidth:0}}><strong>{item.name}</strong><small>{item.category} · Logged in {count} worn {count===1?"look":"looks"}</small></div></div>)}</div> : <p className="small muted">Mark a saved look as worn to build your wear history.</p>}
         </div>
       </div>
       <div className="surface section">
-        <div className="row"><div><h3 style={{fontSize:16,fontWeight:500,margin:"0 0 6px"}}>Pieces not yet logged in a worn look</h3><p className="small muted" style={{margin:0}}>This means there is no saved wear record. It does not mean the garment has never been worn.</p></div><span className="badge neutral">{notLogged.length} shown</span></div>
+        <div className="row"><div><h3 style={{fontSize:16,fontWeight:500,margin:"0 0 6px"}}>Pieces not yet logged in a worn look</h3></div><span className="badge neutral">{notLogged.length} shown</span></div>
         {notLogged.length ? <div className="outfit-strip" style={{marginTop:14}}>{notLogged.map(item=><div key={item.id} style={{minWidth:120,width:120}}>{item.image_url ? <img src={item.image_url} alt={item.name}/> : <div className="avatar"><Shirt size={17}/></div>}<strong style={{display:"block",fontSize:11,marginTop:7}}>{item.name}</strong><small className="muted">{item.category}</small><button className="text-action" style={{display:"block",marginTop:6}} onClick={()=>onStyleItem(item.name)}>Style this piece</button></div>)}</div> : <p className="small muted" style={{marginTop:13}}>No unlogged items are currently shown.</p>}
       </div>
     </section>
