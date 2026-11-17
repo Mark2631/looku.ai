@@ -1,6 +1,15 @@
-const CACHE = "looku-static-v1";
-self.addEventListener("install", event => { self.skipWaiting(); });
-self.addEventListener("activate", event => { event.waitUntil(self.clients.claim()); });
+const CACHE = "looku-static-v2";
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+self.addEventListener("activate", event => {
+  event.waitUntil(Promise.all([
+    self.clients.claim(),
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key.startsWith("looku-static-") && key !== CACHE).map(key => caches.delete(key))
+    )),
+  ]));
+});
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;

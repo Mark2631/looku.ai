@@ -1,3 +1,3 @@
-import { LookuApp } from "@/components/looku-app";
+import { LookuGuestApp } from "@/components/looku-guest-app";
 
-export default function HomePage() { return <LookuApp />; }
+export default function HomePage() { return <LookuGuestApp />; }

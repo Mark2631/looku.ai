@@ -1,11 +1,11 @@
 {
-  "name": "LOOKU — Your style, understood",
+  "name": "LOOKU — Know before you dress",
   "short_name": "LOOKU",
-  "description": "A personal wardrobe, AI stylist and outfit planner.",
+  "description": "A personal wardrobe, outfit studio, lookbook and planner. No account required.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#101113",
-  "theme_color": "#101113",
+  "background_color": "#f7f6f1",
+  "theme_color": "#f7f6f1",
   "icons": [
     {
       "src": "/icon.svg",
